@@ -9,6 +9,7 @@ venv/
 env/
 
 # Variables de entorno
+config.py
 .env
 
 # Base de datos local (si usas SQLite)

@@ -99,7 +99,7 @@ body{
 
 .tasks-container{
     display:grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(3, minmax(320px, 1fr));
     gap:18px;
 }
 
@@ -487,4 +487,28 @@ textarea{
 
 .btn-eliminar:hover{
     background:#d92c2c;
+}
+
+
+.no-tasks{
+    grid-column:1 / -1;
+    text-align:center;
+    padding:60px 20px;
+    color:#666;
+}
+
+.no-tasks-icon{
+    font-size:40px;
+    margin-bottom:10px;
+    opacity:0.6;
+}
+
+.no-tasks h3{
+    margin:5px 0;
+    font-weight:600;
+}
+
+.no-tasks p{
+    font-size:14px;
+    color:#999;
 }

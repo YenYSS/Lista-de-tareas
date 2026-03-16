@@ -38,6 +38,18 @@ async function cargarTareas(){
     const container = document.getElementById("tasks-container")
 
     container.innerHTML = ""
+    if(tareas.length === 0){
+
+        container.innerHTML = `
+            <div class="no-tasks">
+                <div class="no-tasks-icon">📋</div>
+                <h3>No hay tareas</h3>
+                <p>Crea una nueva tarea para comenzar</p>
+            </div>
+        `
+
+        return
+    }
 
     tareas.forEach(tarea => {
 

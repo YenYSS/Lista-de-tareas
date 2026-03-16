@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gestor de Tareas</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+<header class="header">
+
+    <div class="header-left">
+
+        <div class="logo-box">
+            ✔
+        </div>
+
+        <div class="title-container">
+            <h1>TaskFlow</h1>
+            <span id="task-count">0 tareas</span>
+        </div>
+
+    </div>
+
+    <div class="header-right">
+        <button class="btn-new-task">+ Nueva tarea</button>
+    </div>
+
+</header>
+
+<section class="tasks-section">
+
+    <div class="tasks-container" id="tasks-container">
+    </div>
+
+</section>
+
+<div class="modal-overlay" id="modalNuevaTarea">
+
+    <div class="modal">
+
+        <div class="modal-header">
+            <div>
+                <h2 id="modalTitle">Nueva Tarea</h2>
+                <p>Completa los campos para crear una nueva tarea.</p>
+            </div>
+
+            <button class="modal-close" id="cerrarModal">✕</button>
+        </div>
+
+        <form id="formNuevaTarea">
+
+            <div class="form-group">
+                <label>Nombre de la tarea</label>
+                <input type="text" id="titulo" placeholder="Ej: Revisar documentación" required>
+            </div>
+
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea id="descripcion" placeholder="Describe los detalles de la tarea..." required></textarea>
+            </div>
+
+
+            <div class="form-group">
+                <label>Estado</label>
+                <select id="estado">
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en progreso">En progreso</option>
+                    <option value="completada">Completada</option>
+                </select>
+            </div>
+
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancelar">Cancelar</button>
+                <button type="submit" class="btn-crear" id="btnGuardar">Crear tarea</button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+<div class="modal-overlay" id="modalEliminar">
+
+    <div class="modal modal-delete">
+
+        <div class="modal-header">
+            <h2 id="deleteTitle">Eliminar tarea</h2>
+            <button class="modal-close" id="cerrarEliminar">✕</button>
+        </div>
+
+        <div class="delete-icon">⚠</div>
+
+        <p class="delete-text">
+            ¿Estás seguro de que deseas eliminar esta tarea?
+            <br>
+            <strong>Esta acción es irreversible.</strong>
+        </p>
+
+        <div class="modal-buttons">
+            <button class="btn-cancelar" id="cancelarEliminar">Cancelar</button>
+            <button class="btn-eliminar" id="confirmarEliminar">Eliminar</button>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

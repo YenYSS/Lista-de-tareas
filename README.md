@@ -69,4 +69,16 @@ git commit -m "Explicación corta de lo que hiciste"
 
 ### Subir a GitHub:
 
-git push origin main
+git push origin nombre-de-la-rama (Leer abajo)
+
+## 🌳 Estrategia de Ramas (IMPORTANTE)
+
+Para mantener la estabilidad del proyecto, **está prohibido subir cambios directamente a la rama `main`**. Usaremos este flujo para evitar problemas y más trabajo:
+
+1. **main**: Es nuestra oficina terminada. Solo código que funciona al 100%.
+2. **desarrollo**: Es nuestra zona de construcción. Aquí es donde uniremos el trabajo de todos antes de pasarlo a la principal.
+
+### 1. Crea tu propia rama antes de trabajar
+Antes de escribir cualquier código, crea tu espacio de trabajo personal si harás un cambio relevante o sino simplemente subelo a "desarrollo":
+
+git checkout -b nombre-de-tu-rama

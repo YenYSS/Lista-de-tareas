@@ -49,6 +49,7 @@ Python: Asegúrense de tener Python 3.x instalado. Pueden bajarlo de python.org.
 Abran una terminal en la carpeta donde quieran guardar el proyecto y escriban:
 
 git clone https://github.com/YenYSS/Lista-de-tareas.git
+
 cd Lista-de-tareas
 
 ## 3. Configurar el Entorno Virtual

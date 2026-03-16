@@ -15,6 +15,29 @@ Tecnologías usadas: Flask, Python, MySQL (conexión: PyMySql), HTML, CSS, JS.
 # 🛠️ Instrucciones de Instalación
 Para que todos podamos trabajar en el proyecto, sigan estos pasos en orden:
 
+## 🗄️ Configuración de la Base de Datos
+
+Este proyecto utiliza **MySQL**. Para que la aplicación se conecte correctamente en tu computadora, sigue estos pasos:
+
+1. **Importar la Base de Datos:**
+   - Abre tu MySQL (Workbench, phpMyAdmin o terminal).
+   - Crea una base de datos llamada `lista_tareas`.
+   - Importa el archivo `base.sql` que se encuentra en la raíz del proyecto.
+
+2. **Configurar Credenciales:**
+   - Busca el archivo `config_ejemplo.py` en la carpeta principal.
+   - **Cámbiale el nombre** a `config.py`.
+   - Abre el nuevo `config.py` y coloca tus datos locales:
+     ```python
+     DB_HOST = 'localhost'
+     DB_USER = 'tu_usuario'
+     DB_PASS = 'tu_password'
+     DB_NAME = 'lista_tareas'
+     ```
+   
+> [IMPORTANTE]
+> El archivo `config.py` está en el `.gitignore`, por lo que tus contraseñas nunca se subirán al repositorio. Solo se compartirá el "molde" `config_ejemplo.py`.
+
 ## 1. Descargar e Instalar las Herramientas
 Primero necesitan el "motor" para descargar el código y el lenguaje para ejecutarlo:
 
@@ -49,6 +72,7 @@ pip install -r requirements.txt
 Abran la carpeta en Visual Studio Code y para ver la página funcionando ejecuten:
 
 python app.py
+
 Abran su navegador en: http://127.0.0.1:5000
 
 

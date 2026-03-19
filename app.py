@@ -42,33 +42,39 @@ def create_task():
 
     return jsonify({"message": "Tarea creada"}), 201
 
-
-# Actualizar tarea
+# Editar una tarea existente
 @app.route("/tareas/<int:id>", methods=["PUT"])
 def update_task(id):
-    data = request.json
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    sql = """
-    UPDATE tareas
-    SET titulo=%s, descripcion=%s, estado=%s, fecha=%s
-    WHERE id=%s
-    """
+        sql = """
+        UPDATE tareas 
+        SET titulo=%s, descripcion=%s, estado=%s
+        WHERE id=%s
+        """
 
-    cursor.execute(sql, (
-        data["titulo"],
-        data["descripcion"],
-        data["estado"],
-        data["fecha"],
-        id
-    ))
+        cursor.execute(sql, (
+            data.get("titulo"),
+            data.get("descripcion"),
+            data.get("estado"),
+            id
+        ))
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        cursor.close()
+        conn.close()
 
-    return jsonify({"message": "Tarea actualizada"})
+        return jsonify({"message": "Tarea actualizada"}), 200
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 # Eliminar tarea

@@ -158,7 +158,7 @@ async function editarTarea(id){
     document.getElementById("titulo").value = tarea.titulo
     document.getElementById("descripcion").value = tarea.descripcion
     document.getElementById("estado").value = tarea.estado
-    // document.getElementById("fecha").value = tarea.fecha
+    //document.getElementById("fecha").value = tarea.fecha
 
     modal.classList.add("active")
 

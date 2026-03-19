@@ -103,20 +103,20 @@ Para mantener la estabilidad del proyecto, **está prohibido subir cambios direc
 1. **main**: Es nuestra oficina terminada. Solo código que funciona al 100%.
 2. **desarrollo**: Es nuestra zona de construcción. Aquí es donde uniremos el trabajo de todos antes de pasarlo a la principal.
 
-### 1. Crea tu propia rama antes de trabajar
+### Crea tu propia rama antes de trabajar
 Antes de escribir cualquier código, crea tu espacio de trabajo personal si harás un cambio relevante o sino simplemente subelo a "desarrollo":
 
 git checkout -b nombre-de-tu-rama
 
-## Cómo subir un Issue que se te ha asignado
-# ✅ 1. Te asignan un issue
+# Cómo subir un Issue que se te ha asignado
+## ✅ 1. Te asignan un issue
 Ejemplo:
 
 "Frontend: validar título vacío"
 
 👉 Ese issue es tu tarea
 
-# ✅ 2. Crear una rama para ese issue (MUY recomendado)
+## ✅ 2. Crear una rama para ese issue (MUY recomendado)
 En tu terminal:
 
 git checkout main
@@ -127,22 +127,22 @@ git checkout -b fix/validacion-titulo
 fix/... → para arreglos
 feature/... → para nuevas cosas
 
-# ✅ 3. Haces el trabajo
+## ✅ 3. Haces el trabajo
 Ejemplo:
 
 Editas script.js
 Agregas validaciones
 
-# ✅ 4. Guardas los cambios (commit)
+## ✅ 4. Guardas los cambios (commit)
 git add .
 git commit -m "Fix: validación de título vacío en formulario"
 
 💡 Consejo: usa mensajes claros
 
-# ✅ 5. Subes la rama a GitHub
+## ✅ 5. Subes la rama a GitHub
 git push origin fix/validacion-titulo
 
-# ✅ 6. Crear el Pull Request (PR)
+## ✅ 6. Crear el Pull Request (PR)
 
 En GitHub te va a salir:
 

@@ -120,7 +120,9 @@ Ejemplo:
 En tu terminal:
 
 git checkout main
+
 git pull
+
 git checkout -b fix/validacion-titulo
 
 👉 Nombre típico:

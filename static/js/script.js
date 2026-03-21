@@ -7,6 +7,11 @@ const btnCerrarEliminar = document.getElementById("cerrarEliminar")
 const btnCancelarEliminar = document.getElementById("cancelarEliminar")
 const btnConfirmarEliminar = document.getElementById("confirmarEliminar")
 
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("titulo").addEventListener("input", actualizarBoton)
+    document.getElementById("descripcion").addEventListener("input", actualizarBoton)
+})
+
 function formatearFecha(fecha){
 
     const f = new Date(fecha)
@@ -16,6 +21,27 @@ function formatearFecha(fecha){
     const año = f.getUTCFullYear()
 
     return `${dia}/${mes}/${año}`
+}
+
+function obtenerBotonEstado(tarea) {
+
+    if (tarea.estado === "pendiente") {
+        return `
+            <button class="btn-estado iniciar" onclick="cambiarEstado(${tarea.id}, 'en progreso')">
+                ▶️
+            </button>
+        `
+    }
+
+    if (tarea.estado === "en progreso") {
+        return `
+            <button class="btn-estado completar" onclick="cambiarEstado(${tarea.id}, 'completada')">
+                ✅
+            </button>
+        `
+    }
+
+    return "" // 👈 completada no muestra botón
 }
 
 async function cargarTareas(){
@@ -78,6 +104,7 @@ async function cargarTareas(){
             </div>
 
             <div class="task-actions">
+                ${obtenerBotonEstado(tarea)}
                 <button onclick="editarTarea(${tarea.id})">✏</button>
                 <button onclick="eliminarTarea(${tarea.id}, '${tarea.titulo}')">🗑</button>
             </div>
@@ -92,6 +119,43 @@ async function cargarTareas(){
 
 }
 
+async function cambiarEstado(id, nuevoEstado) {
+
+    try {
+
+        // 🔹 1. Obtener la tarea actual
+        const res = await fetch("/tareas")
+        const tareas = await res.json()
+
+        const tarea = tareas.find(t => t.id === id)
+
+        // 🔹 2. Enviar TODO (no solo estado)
+        const response = await fetch("/tareas/" + id, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                titulo: tarea.titulo,
+                descripcion: tarea.descripcion,
+                estado: nuevoEstado
+            })
+        })
+
+        if (!response.ok) {
+            const error = await response.json()
+            mostrarToast(error.error || "Error al cambiar estado", "error")
+            return
+        }
+
+        mostrarToast("Estado actualizado", "success")
+
+        cargarTareas()
+
+    } catch (err) {
+        mostrarToast("Error de conexión", "error")
+    }
+}
 
 /* ELIMINAR */
 function eliminarTarea(id, titulo){
@@ -140,7 +204,39 @@ modalEliminar.addEventListener("click", (e) => {
 
 })
 
+function limpiarErrores() {
+    document.getElementById("error-titulo").textContent = ""
+    document.getElementById("error-descripcion").textContent = ""
 
+    document.getElementById("titulo").classList.remove("input-error")
+    document.getElementById("descripcion").classList.remove("input-error")
+}
+
+function actualizarBoton() {
+
+    const btn = document.getElementById("btnGuardar")
+
+    const titulo = document.getElementById("titulo").value.trim()
+    const descripcion = document.getElementById("descripcion").value.trim()
+
+    let valido = true
+
+    if (
+        titulo === "" ||
+        titulo.length < 3 ||
+        titulo.length > 100 ||
+        !/[a-zA-Z0-9]/.test(titulo) ||
+        titulo.replace(/\s/g, "") === ""
+    ) {
+        valido = false
+    }
+
+    if (descripcion.length > 500) {
+        valido = false
+    }
+
+    btn.disabled = !valido
+}
 /* EDITAR  */
 
 async function editarTarea(id){
@@ -148,6 +244,8 @@ async function editarTarea(id){
     const response = await fetch("/tareas")
     const tareas = await response.json()
 
+
+    
     const tarea = tareas.find(t => t.id === id)
 
     tareaEditando = id
@@ -157,8 +255,29 @@ async function editarTarea(id){
 
     document.getElementById("titulo").value = tarea.titulo
     document.getElementById("descripcion").value = tarea.descripcion
-    document.getElementById("estado").value = tarea.estado
+    const selectEstado = document.getElementById("estado")
+
+    // Reset opciones
+    Array.from(selectEstado.options).forEach(opt => opt.disabled = false)
+
+    // BLOQUEAR SEGÚN ESTADO ACTUAL
+    if (tarea.estado === "en progreso") {
+        selectEstado.querySelector("option[value='pendiente']").disabled = true
+    }
+
+    if (tarea.estado === "completada") {
+        selectEstado.querySelector("option[value='pendiente']").disabled = true
+        selectEstado.querySelector("option[value='en progreso']").disabled = true
+        selectEstado.disabled = true
+    }
+
+    selectEstado.value = tarea.estado
     //document.getElementById("fecha").value = tarea.fecha
+
+    limpiarErrores() 
+    actualizarBoton() 
+
+
 
     modal.classList.add("active")
 
@@ -177,51 +296,102 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
 
     e.preventDefault()
 
+    const tituloInput = document.getElementById("titulo")
+    const descripcionInput = document.getElementById("descripcion")
+
+    const errorTitulo = document.getElementById("error-titulo")
+    const errorDescripcion = document.getElementById("error-descripcion")
+
+    // LIMPIAR ERRORES
+    errorTitulo.textContent = ""
+    errorDescripcion.textContent = ""
+
+    tituloInput.classList.remove("input-error")
+    descripcionInput.classList.remove("input-error")
+
+    let valido = true
+
+    let titulo = tituloInput.value.trim()
+    let descripcion = descripcionInput.value.trim()
+    let estado = document.getElementById("estado").value
+
+    // 📝 VALIDACIÓN TÍTULO
+    if (titulo === "") {
+        errorTitulo.textContent = "El título es obligatorio"
+        tituloInput.classList.add("input-error")
+        valido = false
+    } else if (titulo.replace(/\s/g, "") === "") {
+        errorTitulo.textContent = "No puede contener solo espacios"
+        tituloInput.classList.add("input-error")
+        valido = false
+    } else if (titulo.length < 3) {
+        errorTitulo.textContent = "Mínimo 3 caracteres"
+        tituloInput.classList.add("input-error")
+        valido = false
+    } else if (titulo.length > 100) {
+        errorTitulo.textContent = "Máximo 100 caracteres"
+        tituloInput.classList.add("input-error")
+        valido = false
+    } else if (!/[a-zA-Z0-9]/.test(titulo)) {
+        errorTitulo.textContent = "Debe contener al menos letras o números"
+        tituloInput.classList.add("input-error")
+        valido = false
+    }
+
+    // 📄 VALIDACIÓN DESCRIPCIÓN
+    if (descripcion.length > 500) {
+        errorDescripcion.textContent = "Máximo 500 caracteres"
+        descripcionInput.classList.add("input-error")
+        valido = false
+    }
+
+    // ❌ SI NO ES VÁLIDO → NO ENVÍA
+    if (!valido) return
+
     const data = {
-
-        titulo: document.getElementById("titulo").value,
-        descripcion: document.getElementById("descripcion").value,
-        estado: document.getElementById("estado").value,
-
+        titulo,
+        descripcion,
+        estado
     }
 
-    if(tareaEditando){
+    try {
 
-        await fetch("/tareas/" + tareaEditando,{
+        let response
 
-            method:"PUT",
+        if(tareaEditando){
 
-            headers:{
-                "Content-Type":"application/json"
-            },
+            response = await fetch("/tareas/" + tareaEditando,{
+                method:"PUT",
+                headers:{ "Content-Type":"application/json" },
+                body: JSON.stringify(data)
+            })
 
-            body: JSON.stringify(data)
+        }else{
 
-        })
+            response = await fetch("/tareas",{
+                method:"POST",
+                headers:{ "Content-Type":"application/json" },
+                body: JSON.stringify(data)
+            })
 
-    }else{
+        }
 
-        await fetch("/tareas",{
+        // 🔥 MANEJO DE ERRORES DEL BACKEND
+        if (!response.ok) {
+            const error = await response.json()
+            mostrarToast(error.error || "Error al procesar la solicitud", "error")
+            return
+        }
 
-            method:"POST",
+        tareaEditando = null
+        this.reset()
+        cerrar()
+        cargarTareas()
+        mostrarToast("Tarea guardada correctamente", "success")
 
-            headers:{
-                "Content-Type":"application/json"
-            },
-
-            body: JSON.stringify(data)
-
-        })
-
+    } catch (err) {
+        mostrarToast("Error de conexión con el servidor", "error")
     }
-
-    tareaEditando = null
-
-    this.reset()
-
-    cerrar()
-
-    cargarTareas()
 
 })
 
@@ -236,6 +406,9 @@ btnNuevaTarea.addEventListener("click", () => {
     document.getElementById("btnGuardar").textContent = "Crear tarea"
 
     document.getElementById("formNuevaTarea").reset()
+
+    limpiarErrores()
+    actualizarBoton()
 
     modal.classList.add("active")
 
@@ -268,3 +441,38 @@ modal.addEventListener("click", (e) => {
 
 })
 
+function mostrarToast(mensaje, tipo = "success") {
+    const container = document.getElementById("toast-container")
+
+    const toast = document.createElement("div")
+    toast.classList.add("toast", tipo)
+
+    // ICONOS
+    let icono = ""
+
+    if (tipo === "success") {
+        icono = "✔️"
+    } else if (tipo === "error") {
+        icono = "❌"
+    }
+
+    // ESTRUCTURA
+    toast.innerHTML = `
+        <span>${icono}</span>
+        <span>${mensaje}</span>
+    `
+
+    container.prepend(toast)
+
+    setTimeout(() => {
+        toast.classList.add("show")
+    }, 100)
+
+    setTimeout(() => {
+        toast.classList.remove("show")
+
+        setTimeout(() => {
+            toast.remove()
+        }, 300)
+    }, 3000)
+}

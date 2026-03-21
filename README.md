@@ -126,7 +126,9 @@ git pull
 git checkout -b fix/validacion-titulo
 
 👉 Nombre típico:
+
 fix/... → para arreglos
+
 feature/... → para nuevas cosas
 
 ## ✅ 3. Haces el trabajo
@@ -137,6 +139,7 @@ Agregas validaciones
 
 ## ✅ 4. Guardas los cambios (commit)
 git add .
+
 git commit -m "Fix: validación de título vacío en formulario"
 
 💡 Consejo: usa mensajes claros

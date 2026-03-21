@@ -51,12 +51,14 @@
 
             <div class="form-group">
                 <label>Nombre de la tarea</label>
-                <input type="text" id="titulo" placeholder="Ej: Revisar documentación" required>
+                <input type="text" id="titulo" placeholder="Ej: Revisar documentación">
+                <small id="error-titulo" class="error"></small>
             </div>
 
             <div class="form-group">
                 <label>Descripción</label>
-                <textarea id="descripcion" placeholder="Describe los detalles de la tarea..." required></textarea>
+                <textarea id="descripcion" placeholder="Describe los detalles de la tarea..."></textarea>
+                <small id="error-descripcion" class="error"></small>
             </div>
 
 
@@ -71,7 +73,7 @@
 
             <div class="modal-buttons">
                 <button type="button" class="btn-cancelar">Cancelar</button>
-                <button type="submit" class="btn-crear" id="btnGuardar">Crear tarea</button>
+                <button type="submit" class="btn-crear" id="btnGuardar" disabled>Crear tarea</button>
             </div>
 
         </form>
@@ -79,6 +81,8 @@
     </div>
 
 </div>
+
+
 <div class="modal-overlay" id="modalEliminar">
 
     <div class="modal modal-delete">
@@ -104,6 +108,8 @@
     </div>
 
 </div>
+
+<div id="toast-container"></div>
 
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>

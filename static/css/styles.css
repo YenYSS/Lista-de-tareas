@@ -103,6 +103,14 @@ body{
     gap:18px;
 }
 
+.error {
+  color: red;
+  font-size: 12px;
+}
+
+.input-error {
+  border: 1px solid red;
+}
 
 /* =========================
    TARJETA
@@ -222,7 +230,7 @@ body{
 .task-actions{
     margin-top:auto;
     display:flex;
-    gap:12px;
+    gap:7px;
 }
 
 .task-actions button{
@@ -240,6 +248,27 @@ body{
     color:white;
 }
 
+.btn-estado {
+  background: #007bff;
+  border: none;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-estado:hover {
+  opacity: 0.8;
+}
+
+.btn-estado.iniciar {
+  background: #f4f4f4;
+}
+
+.btn-estado.completar {
+  background: #f4f4f4;
+}
 
 /* =========================
    RESPONSIVE
@@ -458,7 +487,11 @@ textarea{
     cursor:pointer;
 }
 
-/* MODAL ELIMINAR */
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
 
 .modal-delete{
     text-align:center;
@@ -511,4 +544,39 @@ textarea{
 .no-tasks p{
     font-size:14px;
     color:#999;
+}
+
+#toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+.toast {
+  background: #333;
+  color: white;
+  padding: 12px 18px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast.success {
+  background: #28a745;
+}
+
+.toast.error {
+  background: #dc3545;
 }

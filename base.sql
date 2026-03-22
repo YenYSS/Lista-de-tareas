@@ -28,8 +28,9 @@ CREATE TABLE `tareas` (
   `descripcion` text,
   `estado` enum('pendiente','en progreso','completada') NOT NULL,
   `fecha` date DEFAULT NULL,
+  `color` varchar(20) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -38,7 +39,6 @@ CREATE TABLE `tareas` (
 
 LOCK TABLES `tareas` WRITE;
 /*!40000 ALTER TABLE `tareas` DISABLE KEYS */;
-INSERT INTO `tareas` VALUES (1,'Primera Tarea','Esta tarea es para ocupar el primer espacio','pendiente','2026-03-16'),(2,'Segunda Tarea','Esta tarea es para ocupar ahora el segundo espacio','pendiente','2026-03-16'),(3,'Tercera Tarea','Y esta ultima es para ocupar el tercer espacio','pendiente','2026-03-16');
 /*!40000 ALTER TABLE `tareas` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -51,4 +51,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-16 16:02:56
+-- Dump completed on 2026-03-22 13:45:11

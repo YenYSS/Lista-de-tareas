@@ -26,15 +26,16 @@ def create_task():
     cursor = conn.cursor()
 
     sql = """
-    INSERT INTO tareas (titulo, descripcion, estado, fecha)
-    VALUES (%s, %s, %s, %s)
+    INSERT INTO tareas (titulo, descripcion, estado, fecha, color)
+    VALUES (%s, %s, %s, %s, %s)
     """
 
     cursor.execute(sql, (
         data["titulo"],
         data["descripcion"],
         data["estado"],
-        date.today()
+        date.today(),
+        data["color"]
     ))
 
     conn.commit()
@@ -55,7 +56,7 @@ def update_task(id):
 
         sql = """
         UPDATE tareas 
-        SET titulo=%s, descripcion=%s, estado=%s
+        SET titulo=%s, descripcion=%s, estado=%s, color=%s
         WHERE id=%s
         """
 
@@ -63,6 +64,7 @@ def update_task(id):
             data.get("titulo"),
             data.get("descripcion"),
             data.get("estado"),
+            data.get("color"),
             id
         ))
 

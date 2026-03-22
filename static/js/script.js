@@ -41,7 +41,20 @@ function obtenerBotonEstado(tarea) {
         `
     }
 
-    return "" // 👈 completada no muestra botón
+    return ""
+}
+
+function obtenerInfoColor(color) {
+    const colores = {
+        azul: { nombre: "Hogar", clase: "tag-azul" },
+        rojo: { nombre: "Urgente", clase: "tag-rojo" },
+        verde: { nombre: "Trabajo", clase: "tag-verde" },
+        amarillo: { nombre: "Estudio", clase: "tag-amarillo" },
+        morado: { nombre: "Personal", clase: "tag-morado" },
+        gris: { nombre: "Otros", clase: "tag-gris" }
+    }
+
+    return colores[color] || null
 }
 
 async function cargarTareas(){
@@ -82,17 +95,31 @@ async function cargarTareas(){
         const card = document.createElement("div")
         card.classList.add("task-card")
 
+        const infoColor = obtenerInfoColor(tarea.color)
+
+        const colorClase = infoColor ? infoColor.clase : ""
+        const colorNombre = infoColor ? infoColor.nombre : ""
+        card.classList.add(colorClase)
+
         card.innerHTML = `
-        
+
         <div class="task-left">
 
-            <div class="task-header">
-                <h3 class="task-title">${tarea.titulo}</h3>
-                <span class="task-status status-${tarea.estado.replace(" ", "-")}">${tarea.estado}</span>
+            <div class="task-top">
+
+                ${colorNombre ? `<span class="task-badge ${colorClase}">${colorNombre}</span>` : ""}
+
+                <span class="task-status status-${tarea.estado.replace(" ", "-")}">
+                    ${tarea.estado}
+                </span>
+
             </div>
 
-            <p class="task-desc">${tarea.descripcion}</p>
+            <h3 class="task-title" title="${tarea.titulo}">${tarea.titulo}</h3>
 
+            <p class="task-desc" title="${tarea.descripcion || 'Sin descripción'}">
+            ${tarea.descripcion?.trim() ? tarea.descripcion : '<em>Sin descripción</em>'}
+            </p>
         </div>
 
         <div class="task-right">
@@ -110,7 +137,6 @@ async function cargarTareas(){
             </div>
 
         </div>
-
         `
 
         container.appendChild(card)
@@ -122,14 +148,11 @@ async function cargarTareas(){
 async function cambiarEstado(id, nuevoEstado) {
 
     try {
-
-        // 🔹 1. Obtener la tarea actual
         const res = await fetch("/tareas")
         const tareas = await res.json()
 
         const tarea = tareas.find(t => t.id === id)
 
-        // 🔹 2. Enviar TODO (no solo estado)
         const response = await fetch("/tareas/" + id, {
             method: "PUT",
             headers: {
@@ -138,7 +161,8 @@ async function cambiarEstado(id, nuevoEstado) {
             body: JSON.stringify({
                 titulo: tarea.titulo,
                 descripcion: tarea.descripcion,
-                estado: nuevoEstado
+                estado: nuevoEstado,
+                color: tarea.color
             })
         })
 
@@ -252,15 +276,14 @@ async function editarTarea(id){
 
     document.getElementById("modalTitle").textContent = "Editar Tarea"
     document.getElementById("btnGuardar").textContent = "Guardar cambios"
+    document.getElementById("modalDesc").textContent = "Edita los campos para actualizar la tarea."
 
     document.getElementById("titulo").value = tarea.titulo
     document.getElementById("descripcion").value = tarea.descripcion
     const selectEstado = document.getElementById("estado")
 
-    // Reset opciones
     Array.from(selectEstado.options).forEach(opt => opt.disabled = false)
 
-    // BLOQUEAR SEGÚN ESTADO ACTUAL
     if (tarea.estado === "en progreso") {
         selectEstado.querySelector("option[value='pendiente']").disabled = true
     }
@@ -272,6 +295,15 @@ async function editarTarea(id){
     }
 
     selectEstado.value = tarea.estado
+    document.getElementById("color").value = tarea.color || ""
+    const botonesColor = document.querySelectorAll(".color-btn")
+
+    botonesColor.forEach(b => b.classList.remove("active"))
+
+    if (tarea.color) {
+        const btn = document.querySelector(`[data-color="${tarea.color}"]`)
+        if (btn) btn.classList.add("active")
+    }
     //document.getElementById("fecha").value = tarea.fecha
 
     limpiarErrores() 
@@ -314,8 +346,10 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
     let titulo = tituloInput.value.trim()
     let descripcion = descripcionInput.value.trim()
     let estado = document.getElementById("estado").value
+    let color = document.getElementById("color").value
 
-    // 📝 VALIDACIÓN TÍTULO
+
+    // VALIDACIÓN TÍTULO
     if (titulo === "") {
         errorTitulo.textContent = "El título es obligatorio"
         tituloInput.classList.add("input-error")
@@ -338,20 +372,20 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
         valido = false
     }
 
-    // 📄 VALIDACIÓN DESCRIPCIÓN
+    // VALIDACIÓN DESCRIPCIÓN
     if (descripcion.length > 500) {
         errorDescripcion.textContent = "Máximo 500 caracteres"
         descripcionInput.classList.add("input-error")
         valido = false
     }
 
-    // ❌ SI NO ES VÁLIDO → NO ENVÍA
     if (!valido) return
 
     const data = {
         titulo,
         descripcion,
-        estado
+        estado,
+        color
     }
 
     try {
@@ -376,10 +410,9 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
 
         }
 
-        // 🔥 MANEJO DE ERRORES DEL BACKEND
         if (!response.ok) {
             const error = await response.json()
-            mostrarToast(error.error || "Error al procesar la solicitud", "error")
+            mostrarToast(error.error || error.message || "Error al procesar la solicitud", "error")
             return
         }
 
@@ -395,6 +428,22 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
 
 })
 
+const botonesColor = document.querySelectorAll(".color-btn")
+const inputColor = document.getElementById("color")
+
+botonesColor.forEach(btn => {
+    btn.addEventListener("click", () => {
+
+        // quitar selección anterior
+        botonesColor.forEach(b => b.classList.remove("active"))
+
+        // marcar el actual
+        btn.classList.add("active")
+
+        // guardar valor
+        inputColor.value = btn.dataset.color
+    })
+})
 
 /* ABRIR */
 
@@ -406,6 +455,18 @@ btnNuevaTarea.addEventListener("click", () => {
     document.getElementById("btnGuardar").textContent = "Crear tarea"
 
     document.getElementById("formNuevaTarea").reset()
+
+    const botonesColor = document.querySelectorAll(".color-btn")
+    botonesColor.forEach(b => b.classList.remove("active"))
+
+    document.getElementById("color").value = ""
+    const selectEstado = document.getElementById("estado")
+
+    Array.from(selectEstado.options).forEach(opt => opt.disabled = false)
+
+    selectEstado.disabled = false
+    selectEstado.value = "pendiente"
+
 
     limpiarErrores()
     actualizarBoton()

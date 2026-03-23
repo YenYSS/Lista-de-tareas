@@ -47,6 +47,7 @@ def create_task():
 @app.route("/tareas/<int:id>", methods=["PUT"])
 def update_task(id):
     data = request.json
+    print("Datos recibidos:", data)  # Para depurar
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -61,7 +62,7 @@ def update_task(id):
         data["titulo"],
         data["descripcion"],
         data["estado"],
-        data["fecha"],
+        data["fecha"],  # Ahora recibirá '2024-01-15' en lugar de '2024-01-15T10:30:00.000Z'
         id
     ))
 

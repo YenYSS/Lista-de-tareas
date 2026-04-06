@@ -27,6 +27,89 @@
 
 </header>
 
+<!-- Sección de Carpetas / Filtros -->
+<section class="folders-section">
+    <div class="folders-header">
+        <h3>📁 Filtrar por categoría</h3>
+        <button class="btn-clear-filter" id="clearFilterBtn">Mostrar todas</button>
+    </div>
+    <div class="folders-container" id="folders-container">
+        <div class="folder-item" data-categoria="todas">
+            <div class="folder-icon">📂</div>
+            <div class="folder-info">
+                <span class="folder-name">Todas</span>
+                <span class="folder-count" id="count-todas">0</span>
+            </div>
+        </div>
+        <div class="folder-item" data-categoria="azul">
+            <div class="folder-icon">🏠</div>
+            <div class="folder-info">
+                <span class="folder-name">Hogar</span>
+                <span class="folder-count" id="count-azul">0</span>
+            </div>
+        </div>
+        <div class="folder-item" data-categoria="rojo">
+            <div class="folder-icon">⚠️</div>
+            <div class="folder-info">
+                <span class="folder-name">Urgente</span>
+                <span class="folder-count" id="count-rojo">0</span>
+            </div>
+        </div>
+        <div class="folder-item" data-categoria="verde">
+            <div class="folder-icon">💼</div>
+            <div class="folder-info">
+                <span class="folder-name">Trabajo</span>
+                <span class="folder-count" id="count-verde">0</span>
+            </div>
+        </div>
+        <div class="folder-item" data-categoria="amarillo">
+            <div class="folder-icon">📚</div>
+            <div class="folder-info">
+                <span class="folder-name">Estudio</span>
+                <span class="folder-count" id="count-amarillo">0</span>
+            </div>
+        </div>
+        <div class="folder-item" data-categoria="morado">
+            <div class="folder-icon">👤</div>
+            <div class="folder-info">
+                <span class="folder-name">Personal</span>
+                <span class="folder-count" id="count-morado">0</span>
+            </div>
+        </div>
+        <div class="folder-item" data-categoria="gris">
+            <div class="folder-icon">📌</div>
+            <div class="folder-info">
+                <span class="folder-name">Otros</span>
+                <span class="folder-count" id="count-gris">0</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Sección del Calendario -->
+<section class="calendar-section">
+
+    <div class="calendar-header">
+        <button id="prevMonthBtn" class="calendar-nav-btn">←</button>
+        <h2 id="monthYear">Abril 2026</h2>
+        <button id="nextMonthBtn" class="calendar-nav-btn">→</button>
+    </div>
+
+    <div class="calendar-weekdays">
+        <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div>
+        <div>Jue</div><div>Vie</div><div>Sáb</div>
+    </div>
+    
+    <div id="calendarGrid" class="calendar-grid"></div>
+<div class="calendar-size-control">
+        <label>📏 Tamaño:</label>
+        <button id="calendarZoomOut" class="zoom-btn">−</button>
+        <span id="sizeValue">100%</span>
+        <button id="calendarZoomIn" class="zoom-btn">+</button>
+    </div>
+
+</section>
+
 <section class="tasks-section">
 
     <div class="tasks-container" id="tasks-container">

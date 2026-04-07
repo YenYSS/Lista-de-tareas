@@ -16,6 +16,30 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `carpetas`
+--
+
+DROP TABLE IF EXISTS `carpetas`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `carpetas` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `nombre` (`nombre`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `carpetas`
+--
+
+LOCK TABLES `carpetas` WRITE;
+/*!40000 ALTER TABLE `carpetas` DISABLE KEYS */;
+/*!40000 ALTER TABLE `carpetas` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `tareas`
 --
 
@@ -29,7 +53,10 @@ CREATE TABLE `tareas` (
   `estado` enum('pendiente','en progreso','completada') NOT NULL,
   `fecha` date DEFAULT NULL,
   `color` varchar(20) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `carpeta_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_carpeta` (`carpeta_id`),
+  CONSTRAINT `fk_carpeta` FOREIGN KEY (`carpeta_id`) REFERENCES `carpetas` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -51,4 +78,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-22 13:45:11
+-- Dump completed on 2026-04-07  9:01:53

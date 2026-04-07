@@ -4,6 +4,8 @@
     <title>Gestor de Tareas</title>
     <link rel="stylesheet" href="static/css/styles.css">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 </head>
 <body>
 <header class="header">
@@ -27,12 +29,49 @@
 
 </header>
 
-<section class="tasks-section">
+<div class="app-container">
+    <aside class="sidebar">
+        
+        <div class="calendar-section">
+            <div id="mini-calendar">
+                <div class="calendar-header">
+                    <button id="prev-month">←</button>
+                    <span id="calendar-title"></span>
+                    <button id="next-month">→</button>
+                </div>
 
-    <div class="tasks-container" id="tasks-container">
-    </div>
+                <div class="calendar-days">
+                    <span>Lun</span><span>Mar</span><span>Mié</span>
+                    <span>Jue</span><span>Vie</span><span>Sab</span><span>Dom</span>
+                </div>
 
-</section>
+                <div class="calendar-grid" id="calendar-grid"></div>
+
+            </div>
+        </div>
+
+        <div class="folders-section">
+            <h3>Carpetas</h3>
+
+            <ul id="folder-list">
+                <li class="folder-item active" onclick="seleccionarCarpeta('Todas', this)">
+                    <span class="folder-icon">📁</span>
+                    <span class="folder-name">Todas</span>
+                </li>
+            </ul>
+
+            <button class="btn-add-folder">+ Nueva carpeta</button>
+        </div>
+
+    </aside>
+
+    <section class="tasks-section">
+        <div id="filters-info" class="filters-info"></div>
+
+        <div class="tasks-container" id="tasks-container"></div>
+    </section>
+
+</div>
 
 <div class="modal-overlay" id="modalNuevaTarea">
 
@@ -74,17 +113,38 @@
             <div class="form-group">
                 <label>Etiqueta</label>
 
-                <div class="color-options">
-                    <button type="button" class="color-btn azul" data-color="azul" title="Hogar"></button>
-                    <button type="button" class="color-btn rojo" data-color="rojo" title="Urgente"></button>
-                    <button type="button" class="color-btn verde" data-color="verde" title="Trabajo"></button>
-                    <button type="button" class="color-btn amarillo" data-color="amarillo" title="Estudio"></button>
-                    <button type="button" class="color-btn morado" data-color="morado" title="Personal"></button>
-                    <button type="button" class="color-btn gris" data-color="gris" title="Otros"></button>
+                <div class="color-container">
+                    
+                    <div class="color-options">
+                        <button type="button" class="color-btn azul" data-color="azul" data-nombre="Hogar"></button>
+                        <button type="button" class="color-btn rojo" data-color="rojo" data-nombre="Urgente"></button>
+                        <button type="button" class="color-btn verde" data-color="verde" data-nombre="Trabajo"></button>
+                        <button type="button" class="color-btn amarillo" data-color="amarillo" data-nombre="Estudio"></button>
+                        <button type="button" class="color-btn morado" data-color="morado" data-nombre="Personal"></button>
+                        <button type="button" class="color-btn gris" data-color="gris" data-nombre="Otros"></button>
+                    </div>
+
+                    <span id="color-label" class="color-label">Selecciona una etiqueta</span>
+
                 </div>
 
                 <input type="hidden" id="color">
             </div>
+
+            <div class="form-group">
+                <label>Carpeta</label>
+                <select id="task-folder">
+                    <option value="Todas">Sin carpeta</option>
+                    <option value="Trabajo">Trabajo</option>
+                    <option value="Personal">Personal</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Fecha</label>
+                <input type="date" id="fecha" min="">
+            </div>
+
 
             <div class="modal-buttons">
                 <button type="button" class="btn-cancelar">Cancelar</button>

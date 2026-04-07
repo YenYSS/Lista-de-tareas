@@ -1,11 +1,24 @@
 let tareaEditando = null
 let tareaAEliminar = null
+let fechaActual = new Date();
+let tareasGlobal = [];
+let carpetaActual = "Todas";
+let fechaSeleccionada = null;
+
+const inputFecha = document.getElementById("fecha")
+
+const hoy = new Date().toISOString().split("T")[0]
+inputFecha.min = hoy
 
 const modalEliminar = document.getElementById("modalEliminar")
 
 const btnCerrarEliminar = document.getElementById("cerrarEliminar")
 const btnCancelarEliminar = document.getElementById("cancelarEliminar")
 const btnConfirmarEliminar = document.getElementById("confirmarEliminar")
+
+document.addEventListener("DOMContentLoaded", () => {
+    cargarTareas();
+});
 
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("titulo").addEventListener("input", actualizarBoton)
@@ -57,12 +70,327 @@ function obtenerInfoColor(color) {
     return colores[color] || null
 }
 
+function aplicarFiltros() {
+
+    let tareasFiltradas = tareasGlobal;
+
+    if (carpetaActual !== "Todas") {
+        tareasFiltradas = tareasFiltradas.filter(t => 
+            String(t.carpeta_id) === String(carpetaActual)
+        );
+    }
+
+    if (fechaSeleccionada) {
+        tareasFiltradas = tareasFiltradas.filter(t => {
+            const fechaTarea = new Date(t.fecha);
+            const fechaStr = fechaTarea.toISOString().split("T")[0];
+            return fechaStr === fechaSeleccionada;
+        });
+    }
+
+    mostrarTareas(tareasFiltradas);
+    actualizarInfoFiltros();
+}
+
+function seleccionarCarpeta(id, elemento) {
+
+    document.querySelectorAll(".folder-item")
+        .forEach(f => f.classList.remove("active"));
+
+    elemento.classList.add("active");
+
+    carpetaActual = id;
+
+    aplicarFiltros();
+}
+
+document.querySelector(".btn-add-folder").onclick = agregarCarpeta;
+
+async function agregarCarpeta() {
+
+    const nombre = prompt("Nombre de la carpeta:");
+    if (!nombre) return;
+
+    if ([...document.querySelectorAll(".folder-item")]
+        .some(f => f.textContent === nombre)) {
+
+        alert("Esa carpeta ya existe");
+        return;
+    }
+
+    try {
+
+        const res = await fetch("/carpetas", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ nombre })
+        });
+
+        if (!res.ok) {
+            const error = await res.json();
+            alert(error.error || "Error al crear carpeta");
+            return;
+        }
+
+        cargarCarpetas();
+
+    } catch (err) {
+        alert("Error de conexión");
+    }
+}
+
+async function cargarCarpetas() {
+
+    const res = await fetch("/carpetas");
+
+    if (!res.ok) {
+        const text = await res.text();
+        console.error("Error backend:", text);
+        return;
+    }
+
+    const carpetas = await res.json();
+
+    if (!Array.isArray(carpetas)) {
+        console.error("No es array:", carpetas);
+        return;
+    }
+
+    const lista = document.getElementById("folder-list");
+    const select = document.getElementById("task-folder");
+
+    lista.innerHTML = `
+        <li class="folder-item active" onclick="seleccionarCarpeta('Todas', this)">
+            <span class="folder-icon">📁</span>
+            <span class="folder-name">Todas</span>
+        </li>
+    `;
+
+    select.innerHTML = `<option value="">Sin carpeta</option>`;
+
+    carpetas.forEach(carpeta => {
+        const wrapper = document.createElement("div");
+        wrapper.classList.add("folder-wrapper");
+
+        const li = document.createElement("li");
+        li.classList.add("folder-item");
+
+        li.innerHTML = `
+            <span class="folder-icon">📁</span>
+            <span class="folder-name">${carpeta.nombre}</span>
+            <span class="arrow"></span>
+        `;
+
+        const subList = document.createElement("ul");
+        subList.classList.add("subtasks");
+
+        const tareasDeCarpeta = tareasGlobal.filter(t => 
+            String(t.carpeta_id) === String(carpeta.id)
+        );
+
+        tareasDeCarpeta.forEach(t => {
+            const item = document.createElement("li");
+            item.classList.add("subtask-item");
+            item.textContent = t.titulo;
+
+            item.onclick = () => {
+                seleccionarCarpeta(carpeta.id, li);
+            };
+
+            subList.appendChild(item);
+        });
+
+        li.addEventListener("click", function () {
+            li.classList.toggle("open");
+            subList.classList.toggle("show");
+            seleccionarCarpeta(carpeta.id, li);
+        });
+
+        wrapper.appendChild(li);
+        wrapper.appendChild(subList);
+
+        lista.appendChild(wrapper);
+
+        const option = document.createElement("option");
+        option.value = carpeta.id;
+        option.textContent = carpeta.nombre;
+
+        select.appendChild(option);
+    });
+}
+
+function renderCalendar() {
+
+    const grid = document.getElementById("calendar-grid");
+    const title = document.getElementById("calendar-title");
+
+    grid.innerHTML = "";
+
+    const year = fechaActual.getFullYear();
+    const month = fechaActual.getMonth();
+
+    const primerDia = new Date(year, month, 1).getDay();
+    const diasMes = new Date(year, month + 1, 0).getDate();
+
+    title.textContent = fechaActual.toLocaleDateString("es-ES", {
+        month: "long",
+        year: "numeric"
+    });
+
+    const offset = (primerDia === 0 ? 6 : primerDia - 1);
+
+    for (let i = 0; i < offset; i++) {
+        grid.innerHTML += `<div></div>`;
+    }
+
+    for (let dia = 1; dia <= diasMes; dia++) {
+
+        const fechaStr = `${year}-${String(month+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+
+        const tieneTarea = tareasGlobal.some(t => {
+            const fechaTarea = new Date(t.fecha);
+            const fechaStrTarea = fechaTarea.toISOString().split('T')[0]; // "2026-03-22"
+            return fechaStrTarea === fechaStr;
+        });
+
+        grid.innerHTML += `
+            <div class="day ${tieneTarea ? 'day-task' : ''}" 
+                 onclick="seleccionarDia('${fechaStr}', this)">
+                ${dia}
+            </div>
+        `;
+    }
+}
+
+function seleccionarDia(fecha, elemento) {
+
+    const yaSeleccionado = elemento.classList.contains("day-selected");
+
+    document.querySelectorAll(".day")
+        .forEach(d => d.classList.remove("day-selected"));
+
+    if (yaSeleccionado) {
+        fechaSeleccionada = null;
+    } else {
+        elemento.classList.add("day-selected");
+        fechaSeleccionada = fecha;
+    }
+
+    aplicarFiltros();
+}
+
+function actualizarInfoFiltros() {
+
+    const info = document.getElementById("filters-info");
+
+    let html = "";
+
+    const carpetaNombre = document.querySelector(".folder-item.active")?.textContent || "Todas";
+
+    html += `<span class="filter-badge"> ${carpetaNombre}</span>`;
+
+    if (fechaSeleccionada) {
+
+        const fecha = new Date(fechaSeleccionada);
+
+        const fechaFormateada = fecha.toLocaleDateString("es-ES", {
+            day: "numeric",
+            month: "long",
+            year: "numeric"
+        });
+
+        html += `<span class="filter-badge">📅 ${fechaFormateada}</span>`;
+
+    } else {
+        html += `<span class="filter-badge">📅 Todas las fechas</span>`;
+    }
+
+    info.innerHTML = html;
+}
+
+document.getElementById("prev-month").onclick = () => {
+    fechaActual.setMonth(fechaActual.getMonth() - 1);
+    renderCalendar();
+};
+
+document.getElementById("next-month").onclick = () => {
+    fechaActual.setMonth(fechaActual.getMonth() + 1);
+    renderCalendar();
+};
+
+function mostrarTareas(tareas) {
+
+    const container = document.getElementById("tasks-container");
+
+    container.innerHTML = "";
+
+    container.classList.remove("empty")
+
+    if (tareas.length === 0) {
+        container.classList.add("empty");
+
+        container.innerHTML = `
+            <div class="no-tasks">
+                <div class="no-tasks-icon">📋</div>
+                <h3>No hay tareas para este día</h3>
+            </div>
+        `;
+    } else {
+        tareas.forEach(tarea => {
+            const card = document.createElement("div");
+            card.classList.add("task-card");
+
+            const infoColor = obtenerInfoColor(tarea.color);
+
+            const colorClase = infoColor ? infoColor.clase : "";
+            const colorNombre = infoColor ? infoColor.nombre : "";
+
+            if (colorClase) {
+                card.classList.add(colorClase);
+            }
+
+            card.innerHTML = `
+                <div class="task-left">
+                    <div class="task-top">
+                        ${colorNombre ? `<span class="task-badge ${colorClase}">${colorNombre}</span>` : ""}
+                        <span class="task-status status-${tarea.estado?.replace(" ", "-") || ""}">
+                            ${tarea.estado || ""}
+                        </span>
+                    </div>
+                    <h3 class="task-title" title="${tarea.titulo}">${tarea.titulo}</h3>
+                    <p class="task-desc" title="${tarea.descripcion || 'Sin descripción'}">
+                        ${tarea.descripcion?.trim() ? tarea.descripcion : '<em>Sin descripción</em>'}
+                    </p>
+                </div>
+                <div class="task-right">
+                    <div class="task-info">
+                        <div class="task-id-label">TAREA</div>
+                        <div class="task-id">#${tarea.id}</div>
+                        <div class="task-date">${formatearFecha(tarea.fecha)}</div>
+                    </div>
+                    <div class="task-actions">
+                        ${obtenerBotonEstado(tarea)}
+                        <button onclick="editarTarea(${tarea.id})">✏</button>
+                        <button onclick="eliminarTarea(${tarea.id}, '${tarea.titulo}')">🗑</button>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(card);
+        });
+    }
+}
+
 async function cargarTareas(){
 
     const response = await fetch("/tareas")
     const tareas = await response.json()
 
-    /* CONTADOR */
+
+    tareasGlobal = tareas;
+    renderCalendar();
+    aplicarFiltros();
+    console.log(tareasGlobal);
 
     const contador = document.getElementById("task-count")
 
@@ -72,12 +400,13 @@ async function cargarTareas(){
         contador.textContent = tareas.length + " tareas"
     }
 
-    /* CONTENEDOR */
-
     const container = document.getElementById("tasks-container")
 
     container.innerHTML = ""
+    container.classList.remove("empty")
     if(tareas.length === 0){
+
+        container.classList.remove("empty")
 
         container.innerHTML = `
             <div class="no-tasks">
@@ -86,7 +415,6 @@ async function cargarTareas(){
                 <p>Crea una nueva tarea para comenzar</p>
             </div>
         `
-
         return
     }
 
@@ -97,9 +425,12 @@ async function cargarTareas(){
 
         const infoColor = obtenerInfoColor(tarea.color)
 
-        const colorClase = infoColor ? infoColor.clase : ""
-        const colorNombre = infoColor ? infoColor.nombre : ""
-        card.classList.add(colorClase)
+        const colorClase = infoColor ? infoColor.clase : "";
+        const colorNombre = infoColor ? infoColor.nombre : "";
+
+        if (colorClase) {
+            card.classList.add(colorClase);
+        }
 
         card.innerHTML = `
 
@@ -142,6 +473,9 @@ async function cargarTareas(){
         container.appendChild(card)
 
     })
+    tareasGlobal = tareas;
+
+    cargarCarpetas();
 
 }
 
@@ -206,7 +540,7 @@ btnConfirmarEliminar.addEventListener("click", async () => {
     cerrarEliminarModal()
 
     cargarTareas()
-
+    await cargarCarpetas();
 })
 
 btnCerrarEliminar.addEventListener("click", cerrarEliminarModal)
@@ -261,15 +595,13 @@ function actualizarBoton() {
 
     btn.disabled = !valido
 }
-/* EDITAR  */
 
+/* EDITAR  */
 async function editarTarea(id){
 
     const response = await fetch("/tareas")
     const tareas = await response.json()
 
-
-    
     const tarea = tareas.find(t => t.id === id)
 
     tareaEditando = id
@@ -305,17 +637,17 @@ async function editarTarea(id){
         if (btn) btn.classList.add("active")
     }
     //document.getElementById("fecha").value = tarea.fecha
+    document.getElementById("task-folder").value = tarea.carpeta_id || ""
+    document.getElementById("fecha").value =
+        new Date(tarea.fecha).toISOString().split("T")[0]
 
     limpiarErrores() 
     actualizarBoton() 
-
-
-
+    await cargarTareas();
+    await cargarCarpetas();
     modal.classList.add("active")
 
 }
-
-cargarTareas()
 
 
 /* MODAL */
@@ -334,7 +666,6 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
     const errorTitulo = document.getElementById("error-titulo")
     const errorDescripcion = document.getElementById("error-descripcion")
 
-    // LIMPIAR ERRORES
     errorTitulo.textContent = ""
     errorDescripcion.textContent = ""
 
@@ -346,7 +677,9 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
     let titulo = tituloInput.value.trim()
     let descripcion = descripcionInput.value.trim()
     let estado = document.getElementById("estado").value
-    let color = document.getElementById("color").value
+    let color = document.getElementById("color").value || "gris"
+    let carpeta_id = document.getElementById("task-folder").value || null
+    let fecha = document.getElementById("fecha").value
 
 
     // VALIDACIÓN TÍTULO
@@ -379,13 +712,20 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
         valido = false
     }
 
+    if (!fecha) {
+    mostrarToast("Debes seleccionar una fecha", "error")
+    return
+    }
+
     if (!valido) return
 
     const data = {
         titulo,
         descripcion,
         estado,
-        color
+        color,
+        carpeta_id,
+        fecha
     }
 
     try {
@@ -420,6 +760,8 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
         this.reset()
         cerrar()
         cargarTareas()
+        await cargarTareas(); 
+        await cargarCarpetas(); 
         mostrarToast("Tarea guardada correctamente", "success")
 
     } catch (err) {
@@ -430,23 +772,24 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
 
 const botonesColor = document.querySelectorAll(".color-btn")
 const inputColor = document.getElementById("color")
+const colorLabel = document.getElementById("color-label")
 
 botonesColor.forEach(btn => {
     btn.addEventListener("click", () => {
-
-        // quitar selección anterior
         botonesColor.forEach(b => b.classList.remove("active"))
 
-        // marcar el actual
         btn.classList.add("active")
 
-        // guardar valor
-        inputColor.value = btn.dataset.color
+        const color = btn.dataset.color
+        const nombre = btn.dataset.nombre
+
+        inputColor.value = color
+
+        colorLabel.textContent = nombre
     })
 })
 
 /* ABRIR */
-
 btnNuevaTarea.addEventListener("click", () => {
 
     tareaEditando = null
@@ -477,7 +820,6 @@ btnNuevaTarea.addEventListener("click", () => {
 
 
 /* CERRAR */
-
 cerrarModal.addEventListener("click", cerrar)
 btnCancelar.addEventListener("click", cerrar)
 
@@ -493,7 +835,6 @@ function cerrar(){
 
 
 /* CERRAR 2 */
-
 modal.addEventListener("click", (e) => {
 
     if(e.target === modal){
@@ -508,7 +849,6 @@ function mostrarToast(mensaje, tipo = "success") {
     const toast = document.createElement("div")
     toast.classList.add("toast", tipo)
 
-    // ICONOS
     let icono = ""
 
     if (tipo === "success") {
@@ -517,7 +857,6 @@ function mostrarToast(mensaje, tipo = "success") {
         icono = "❌"
     }
 
-    // ESTRUCTURA
     toast.innerHTML = `
         <span>${icono}</span>
         <span>${mensaje}</span>

@@ -220,46 +220,56 @@ async function cargarCarpetas() {
 }
 
 function renderCalendar() {
-
     const grid = document.getElementById("calendar-grid");
     const title = document.getElementById("calendar-title");
+    if (!grid || !title) return; // Validación de seguridad
 
     grid.innerHTML = "";
-
     const year = fechaActual.getFullYear();
     const month = fechaActual.getMonth();
-
-    const primerDia = new Date(year, month, 1).getDay();
     const diasMes = new Date(year, month + 1, 0).getDate();
+    
+    // Ajuste para que la semana empiece en Lunes (0=Dom, 1=Lun...)
+    let primerDia = new Date(year, month, 1).getDay();
+    const offset = (primerDia === 0 ? 6 : primerDia - 1);
 
     title.textContent = fechaActual.toLocaleDateString("es-ES", {
         month: "long",
         year: "numeric"
     });
 
-    const offset = (primerDia === 0 ? 6 : primerDia - 1);
+    let htmlAcumulado = "";
 
+    // Espacios vacíos del inicio
     for (let i = 0; i < offset; i++) {
-        grid.innerHTML += `<div></div>`;
+        htmlAcumulado += `<div></div>`;
     }
 
+    // Dibujar los días del mes
     for (let dia = 1; dia <= diasMes; dia++) {
+        const fechaStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 
-        const fechaStr = `${year}-${String(month+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
-
+        // VALIDACIÓN ANTI-ERRORES:
         const tieneTarea = tareasGlobal.some(t => {
+            if (!t.fecha) return false; 
+            
             const fechaTarea = new Date(t.fecha);
-            const fechaStrTarea = fechaTarea.toISOString().split('T')[0]; // "2026-03-22"
+            // Si la fecha es inválida, getTime() devuelve NaN
+            if (isNaN(fechaTarea.getTime())) return false; 
+
+            const fechaStrTarea = fechaTarea.toISOString().split('T')[0];
             return fechaStrTarea === fechaStr;
         });
 
-        grid.innerHTML += `
+        htmlAcumulado += `
             <div class="day ${tieneTarea ? 'day-task' : ''}" 
                  onclick="seleccionarDia('${fechaStr}', this)">
                 ${dia}
             </div>
         `;
     }
+    
+    grid.innerHTML = htmlAcumulado;
 }
 
 function seleccionarDia(fecha, elemento) {
@@ -440,8 +450,8 @@ async function cargarTareas(){
 
                 ${colorNombre ? `<span class="task-badge ${colorClase}">${colorNombre}</span>` : ""}
 
-                <span class="task-status status-${tarea.estado.replace(" ", "-")}">
-                    ${tarea.estado}
+                <span class="task-status status-${(tarea.estado || "pendiente").replace(/\s+/g, "-").toLowerCase()}">
+                    ${tarea.estado || "Pendiente"}
                 </span>
 
             </div>
@@ -666,6 +676,8 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
     const errorTitulo = document.getElementById("error-titulo")
     const errorDescripcion = document.getElementById("error-descripcion")
 
+    let carpetaValue = document.getElementById("task-folder").value;
+
     errorTitulo.textContent = ""
     errorDescripcion.textContent = ""
 
@@ -678,7 +690,7 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
     let descripcion = descripcionInput.value.trim()
     let estado = document.getElementById("estado").value
     let color = document.getElementById("color").value || "gris"
-    let carpeta_id = document.getElementById("task-folder").value || null
+    let carpeta_id = (carpetaValue === "Todas" || carpetaValue === "") ? null : carpetaValue;
     let fecha = document.getElementById("fecha").value
 
 
@@ -723,9 +735,9 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
         titulo,
         descripcion,
         estado,
+        fecha,
         color,
-        carpeta_id,
-        fecha
+        carpeta_id
     }
 
     try {

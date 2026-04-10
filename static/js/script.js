@@ -490,12 +490,13 @@ async function cargarTareas(){
 }
 
 async function cambiarEstado(id, nuevoEstado) {
-
     try {
-        const res = await fetch("/tareas")
-        const tareas = await res.json()
+        // Buscamos la tarea actual en tareasGlobal (ya la tienes cargada, no necesitas otro fetch inicial)
+        const tarea = tareasGlobal.find(t => t.id === id);
 
-        const tarea = tareas.find(t => t.id === id)
+        // Convertimos la fecha a formato YYYY-MM-DD
+        // Esto evita el error "Incorrect date value"
+        const fechaISO = new Date(tarea.fecha).toISOString().split('T')[0];
 
         const response = await fetch("/tareas/" + id, {
             method: "PUT",
@@ -506,22 +507,23 @@ async function cambiarEstado(id, nuevoEstado) {
                 titulo: tarea.titulo,
                 descripcion: tarea.descripcion,
                 estado: nuevoEstado,
-                color: tarea.color
+                color: tarea.color,
+                fecha: fechaISO // Enviamos la fecha limpia
             })
-        })
+        });
 
         if (!response.ok) {
-            const error = await response.json()
-            mostrarToast(error.error || "Error al cambiar estado", "error")
-            return
+            const error = await response.json();
+            mostrarToast(error.error || "Error al cambiar estado", "error");
+            return;
         }
 
-        mostrarToast("Estado actualizado", "success")
-
-        cargarTareas()
+        mostrarToast("Estado actualizado", "success");
+        cargarTareas();
 
     } catch (err) {
-        mostrarToast("Error de conexión", "error")
+        console.error(err);
+        mostrarToast("Error de conexión", "error");
     }
 }
 
@@ -887,4 +889,116 @@ function mostrarToast(mensaje, tipo = "success") {
             toast.remove()
         }, 300)
     }, 3000)
+}
+
+
+function exportarExcelCompleto() {
+    if (!tareasGlobal || tareasGlobal.length === 0) {
+        alert("No hay tareas para exportar.");
+        return;
+    }
+
+    const libro = XLSX.utils.book_new();
+
+    // 1. PASO UNO: BUSCAR Y DEFINIR LA LISTA DE CARPETAS DE LA BD
+    const listaCarpetasBD = {
+        1: "trabajo",
+        2: "urgente",
+        3: "hogar",
+        4: "estudio",
+        5: "personal",
+        6: "otros",
+        7: "jesfu27"
+    };
+
+    // Mapa de etiquetas para los colores
+    const mapaEtiquetas = {
+        "azul": "Hogar", "rojo": "Urgente", "verde": "Trabajo",
+        "amarillo": "Estudio", "morado": "Personal", "gris": "Otros"
+    };
+
+    // 2. PASO DOS: RELACIONAR CADA TAREA CON SU CARPETA
+    const datosProcesados = tareasGlobal.map(t => {
+        const idCarpetaTarea = t.id_carpeta || t.id_categoria || t.carpeta_id;
+        
+        let nombreRelacionado = listaCarpetasBD[idCarpetaTarea] || "General";
+
+        nombreRelacionado = nombreRelacionado.charAt(0).toUpperCase() + nombreRelacionado.slice(1);
+
+        return {
+            "ID": t.id,
+            "Título": t.titulo || "",
+            "Descripción": t.descripcion || "",
+            "Estado": t.estado || "Pendiente",
+            "Fecha": t.fecha ? new Date(t.fecha).toLocaleDateString() : "",
+            "Etiqueta": t.etiqueta || mapaEtiquetas[t.color?.toLowerCase()] || "Sin etiqueta",
+            "Carpeta": nombreRelacionado
+        };
+    });
+
+    const colWidths = [{wch: 5}, {wch: 25}, {wch: 35}, {wch: 15}, {wch: 12}, {wch: 15}, {wch: 15}];
+
+    // --- HOJA 1: LISTADO GENERAL ---
+    const hojaTodas = XLSX.utils.json_to_sheet(datosProcesados);
+    hojaTodas['!cols'] = colWidths;
+    XLSX.utils.book_append_sheet(libro, hojaTodas, "Listado General");
+
+    // --- HOJA 2: TAREAS POR ESTADO ---
+    const hojaEstados = XLSX.utils.json_to_sheet([]);
+    let filaActual = 0;
+    ["pendiente", "en progreso", "completada"].forEach(estado => {
+        const filtradas = datosProcesados.filter(t => t.Estado.toLowerCase() === estado);
+        if (filtradas.length > 0) {
+            XLSX.utils.sheet_add_aoa(hojaEstados, [[`>>> TAREAS EN ${estado.toUpperCase()} <<<`]], { origin: `A${filaActual + 1}` });
+            XLSX.utils.sheet_add_json(hojaEstados, filtradas, { origin: `A${filaActual + 2}` });
+            filaActual += filtradas.length + 4;
+        }
+    });
+    hojaEstados['!cols'] = colWidths;
+    XLSX.utils.book_append_sheet(libro, hojaEstados, "Tareas por Estado");
+
+    // --- HOJA 3: ESTADÍSTICAS Y CONTEO ---
+    const conteo = {};
+    Object.values(listaCarpetasBD).forEach(nom => {
+        conteo[nom.charAt(0).toUpperCase() + nom.slice(1)] = 0;
+    });
+    conteo["General"] = 0;
+
+    datosProcesados.forEach(f => {
+        if (conteo.hasOwnProperty(f.Carpeta)) {
+            conteo[f.Carpeta]++;
+        } else {
+            conteo["General"]++;
+        }
+    });
+
+    // Inicio de la estructura de la hoja de estadísticas
+    const datosStats = [
+        ["REPORTE ESTADÍSTICO TASKFLOW"],
+        [],
+        ["RESUMEN DE ESTADOS", "CANTIDAD"],
+        ["Completadas", datosProcesados.filter(t => t.Estado.toLowerCase() === "completada").length],
+        ["En Progreso", datosProcesados.filter(t => t.Estado.toLowerCase() === "en progreso").length],
+        ["Pendientes", datosProcesados.filter(t => t.Estado.toLowerCase() === "pendiente").length],
+        ["TOTAL TAREAS", datosProcesados.length],
+        [],
+        ["DISTRIBUCIÓN POR CARPETAS", "TAREAS"]
+    ];
+
+    // Agregamos la lista de carpetas y sus conteos
+    Object.entries(conteo).forEach(([nom, total]) => {
+        datosStats.push([nom, total]);
+    });
+
+    // AGREGADO: Contador de carpetas al final (detrás de la distribución)
+    const totalCarpetas = Object.keys(listaCarpetasBD).length;
+    datosStats.push([]); // Espacio en blanco
+    datosStats.push(["TOTAL DE CARPETAS CONFIGURADAS", totalCarpetas]);
+
+    const hojaStats = XLSX.utils.aoa_to_sheet(datosStats);
+    hojaStats['!cols'] = [{wch: 35}, {wch: 15}];
+    XLSX.utils.book_append_sheet(libro, hojaStats, "Estadísticas");
+
+    // Generar archivo
+    XLSX.writeFile(libro, "Reporte_TaskFlow_Sincronizado.xlsx");
 }

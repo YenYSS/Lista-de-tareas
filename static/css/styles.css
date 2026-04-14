@@ -74,8 +74,9 @@ body{
     background: #111827;
     color: #fff;
     border-color: #111827;
+    font-weight: 600;
 }
-/* Si decides quitar el logo-box, puedes borrar sus reglas anteriores */
+
 
 /* titulo */
 

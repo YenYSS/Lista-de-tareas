@@ -349,14 +349,12 @@ confirmarEliminarCarpeta.addEventListener("click", async () => {
 
         cerrarModalEliminarCarpeta();
 
-        // 🔥 RESET DE ESTADO
         carpetaActual = "Todas";
         fechaSeleccionada = null;
 
         await cargarCarpetas();
         await cargarTareas();
 
-        // 🔥 APLICAR FILTRO A TODAS
         aplicarFiltros();
 
         mostrarToast("Carpeta eliminada", "success");
@@ -521,7 +519,6 @@ function renderCalendar() {
     const month = fechaActual.getMonth();
     const diasMes = new Date(year, month + 1, 0).getDate();
     
-    // Ajuste para que la semana empiece en Lunes (0=Dom, 1=Lun...)
     let primerDia = new Date(year, month, 1).getDay();
     const offset = (primerDia === 0 ? 6 : primerDia - 1);
 
@@ -532,16 +529,13 @@ function renderCalendar() {
 
     let htmlAcumulado = "";
 
-    // Espacios vacíos del inicio
     for (let i = 0; i < offset; i++) {
         htmlAcumulado += `<div></div>`;
     }
 
-    // Dibujar los días del mes
     for (let dia = 1; dia <= diasMes; dia++) {
         const fechaStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 
-        // VALIDACIÓN ANTI-ERRORES:
         const tieneTarea = tareasGlobal.some(t => {
             if (!t.fecha) return false;
 
@@ -550,7 +544,6 @@ function renderCalendar() {
             const [y, m, d] = t.fecha.split("T")[0].split("-");
             const fechaUTC = new Date(t.fecha);
 
-            // 🔥 convertir a LOCAL sin desfase
             const fechaLocal = new Date(
                 fechaUTC.getUTCFullYear(),
                 fechaUTC.getUTCMonth(),
@@ -641,7 +634,6 @@ function actualizarInfoFiltros() {
 
     html += `<span class="filter-badge">📌 ${estadoTexto}</span>`;
 
-    // 🔥 BOTÓN LIMPIAR (solo si hay filtros activos)
     if (carpetaNombre !== "Todas" || fechaSeleccionada || estadoSeleccionado !== "todos") {
         html += `
         <button class="btn-clear-filters" onclick="limpiarFiltros()">
@@ -654,24 +646,30 @@ function actualizarInfoFiltros() {
 }
 
 function limpiarFiltros() {
-
-    // reset carpeta
     carpetaActual = "Todas";
-
     document.querySelectorAll(".folder-item")
         .forEach(f => f.classList.remove("active"));
-
+    
     const todas = document.querySelector(".folder-item");
     if (todas) todas.classList.add("active");
 
-    // reset fecha
     fechaSeleccionada = null;
-
     document.querySelectorAll(".day")
         .forEach(d => d.classList.remove("day-selected"));
 
     estadoSeleccionado = "todos";
-    aplicarFiltros();
+    
+        const contenedorEstados = document.querySelector(".estado-filtros");
+        const botonesEstado = contenedorEstados.querySelectorAll("button");
+
+        botonesEstado.forEach(b => b.classList.remove("active"));
+
+        if (contenedorEstados.firstElementChild) {
+            contenedorEstados.firstElementChild.classList.add("active");
+        }
+
+        aplicarFiltros();
+        actualizarInfoFiltros();
 }
 
 document.getElementById("prev-month").onclick = () => {
@@ -879,7 +877,6 @@ async function cambiarEstado(id, nuevoEstado) {
         await cargarTareas();
         await cargarCarpetas();
 
-        // restaurar carpeta
         carpetaActual = carpetaAntes;
 
         document.querySelectorAll(".folder-item")
@@ -993,7 +990,6 @@ async function editarTarea(id){
     const tarea = tareas.find(t => t.id === id)
 
     tareaEditando = id
-    // 🔥 SOLO cambiar carpeta si NO estás en "Todas"
     if (carpetaActual !== "Todas") {
         carpetaActual = tarea.carpeta_id || "Todas";
     }
@@ -1692,10 +1688,8 @@ function cargarGraficoFechas(tareas) {
     tareas.forEach(t => {
         if (!t.fecha) return;
 
-        // 🔥 ignorar completadas
         if (t.estado === "completada") return;
 
-        // 🔥 convertir UTC → LOCAL
         const fechaUTC = new Date(t.fecha);
 
         const fechaObj = new Date(
@@ -1829,12 +1823,10 @@ function cargarGraficoProductividad(tareas) {
             const [aYear, aSemana] = a[0].split(" - Semana ");
             const [bYear, bSemana] = b[0].split(" - Semana ");
 
-            // ordenar por año primero
             if (aYear !== bYear) {
                 return aYear - bYear;
             }
 
-            // luego por número de semana
             return aSemana - bSemana;
         });
 
@@ -1905,7 +1897,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let state = localStorage.getItem("sidebarState");
 
-    // 🔥 primera vez → cerrado por defecto
     if (state === null) {
         state = "collapsed";
         localStorage.setItem("sidebarState", state);
@@ -1913,14 +1904,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function applyState() {
 
-        // 💻 DESKTOP: SIEMPRE ABIERTO
         if (!isMobile()) {
             sidebar.classList.remove("collapsed");
             toggleBtn.textContent = "✕";
             return;
         }
 
-        // 📱 MOBILE: usa estado guardado
         const collapsed = state === "collapsed";
 
         sidebar.classList.toggle("collapsed", collapsed);
@@ -1931,7 +1920,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     toggleBtn.addEventListener("click", () => {
 
-        // solo funciona en mobile
         if (!isMobile()) return;
 
         const collapsed = sidebar.classList.toggle("collapsed");
@@ -1942,15 +1930,10 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleBtn.textContent = collapsed ? "☰" : "✕";
     });
 
-    // 🔥 si cambias tamaño de pantalla (muy importante)
     window.addEventListener("resize", () => {
         applyState();
     });
 });
-
-
-
-
 
 const btnTareas = document.getElementById("btnTareas");
 const btnAnalisis = document.getElementById("btnAnalisis");

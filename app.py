@@ -10,7 +10,19 @@ def get_tasks():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM tareas")
+    cursor.execute("""
+        SELECT 
+            t.id,
+            t.titulo,
+            t.descripcion,
+            t.estado,
+            t.fecha,
+            t.color,
+            t.carpeta_id,
+            c.nombre AS carpeta_nombre
+        FROM tareas t
+        LEFT JOIN carpetas c ON t.carpeta_id = c.id
+    """)
     tasks = cursor.fetchall()
 
     conn.close()
@@ -104,7 +116,7 @@ def get_carpetas():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT id, nombre FROM carpetas")
+        cursor.execute("SELECT id, nombre FROM carpetas ORDER BY nombre ASC")
         rows = cursor.fetchall()
 
         print("ROWS:", rows)
@@ -141,7 +153,7 @@ def create_carpeta():
 
     try:
         cursor.execute(
-            "INSERT INTO carpetas (nombre) VALUES (%s)",
+            "INSERT INTO carpetas (nombre) VALUES (%s) ",
             (nombre,)
         )
         conn.commit()
@@ -151,6 +163,40 @@ def create_carpeta():
     conn.close()
 
     return jsonify({"message": "Carpeta creada"}), 201
+
+@app.route("/carpetas/<int:id>", methods=["PUT"])
+def update_carpeta(id):
+    data = request.json
+    nombre = data.get("nombre")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "UPDATE carpetas SET nombre=%s WHERE id=%s",
+        (nombre, id)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Actualizada"})
+
+@app.route("/carpetas/<int:id>", methods=["DELETE"])
+def delete_carpeta(id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "UPDATE tareas SET carpeta_id = NULL WHERE carpeta_id = %s",
+        (id,)
+    )
+    cursor.execute("DELETE FROM carpetas WHERE id=%s", (id,))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Eliminada"})
 
 @app.route("/")
 def index():

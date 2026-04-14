@@ -4,11 +4,19 @@ let fechaActual = new Date();
 let tareasGlobal = [];
 let carpetaActual = "Todas";
 let fechaSeleccionada = null;
+let estadoSeleccionado = "todos";
 
 const inputFecha = document.getElementById("fecha")
 
-const hoy = new Date().toISOString().split("T")[0]
-inputFecha.min = hoy
+function obtenerFechaHoyLocal() {
+    const hoy = new Date()
+    return hoy.getFullYear() + "-" +
+        String(hoy.getMonth() + 1).padStart(2, "0") + "-" +
+        String(hoy.getDate()).padStart(2, "0")
+}
+
+inputFecha.min = obtenerFechaHoyLocal()
+document.getElementById("fecha").min = obtenerFechaHoyLocal();
 
 const modalEliminar = document.getElementById("modalEliminar")
 
@@ -73,7 +81,7 @@ function obtenerInfoColor(color) {
 function aplicarFiltros() {
 
     let tareasFiltradas = tareasGlobal;
-
+    
     if (carpetaActual !== "Todas") {
         tareasFiltradas = tareasFiltradas.filter(t => 
             String(t.carpeta_id) === String(carpetaActual)
@@ -82,15 +90,59 @@ function aplicarFiltros() {
 
     if (fechaSeleccionada) {
         tareasFiltradas = tareasFiltradas.filter(t => {
-            const fechaTarea = new Date(t.fecha);
-            const fechaStr = fechaTarea.toISOString().split("T")[0];
+            const fechaUTC = new Date(t.fecha);
+
+            const fechaLocal = new Date(
+                fechaUTC.getUTCFullYear(),
+                fechaUTC.getUTCMonth(),
+                fechaUTC.getUTCDate()
+            );
+
+            const fechaStr = fechaLocal.getFullYear() + "-" +
+                String(fechaLocal.getMonth() + 1).padStart(2, '0') + "-" +
+                String(fechaLocal.getDate()).padStart(2, '0');
             return fechaStr === fechaSeleccionada;
         });
+    }
+
+        // 📁 filtro carpeta
+    if (carpetaActual !== "Todas") {
+        tareasFiltradas = tareasFiltradas.filter(t =>
+            String(t.carpeta_id) === String(carpetaActual)
+        );
+    }
+
+    // 📅 filtro fecha
+    if (fechaSeleccionada) {
+        tareasFiltradas = tareasFiltradas.filter(t =>
+            t.fecha === fechaSeleccionada
+        );
+    }
+
+    // 🔥 NUEVO: filtro estado
+    if (estadoSeleccionado !== "todos") {
+        tareasFiltradas = tareasFiltradas.filter(t =>
+            t.estado === estadoSeleccionado
+        );
     }
 
     mostrarTareas(tareasFiltradas);
     actualizarInfoFiltros();
 }
+
+function filtrarPorEstado(estado, elemento) {
+    estadoSeleccionado = estado;
+
+    document.querySelectorAll(".estado-filtros button")
+        .forEach(b => b.classList.remove("active"));
+
+    elemento.classList.add("active");
+
+    aplicarFiltros();
+    actualizarInfoFiltros();
+}
+
+
 
 function seleccionarCarpeta(id, elemento) {
 
@@ -101,46 +153,223 @@ function seleccionarCarpeta(id, elemento) {
 
     carpetaActual = id;
 
+    fechaSeleccionada = null;
+
+    document.querySelectorAll(".day")
+        .forEach(d => d.classList.remove("day-selected"));
+
     aplicarFiltros();
 }
 
-document.querySelector(".btn-add-folder").onclick = agregarCarpeta;
 
-async function agregarCarpeta() {
+document.addEventListener("DOMContentLoaded", () => {
 
-    const nombre = prompt("Nombre de la carpeta:");
-    if (!nombre) return;
+    const modalCarpeta = document.getElementById("modalCarpeta");
+    const btnAddFolder = document.querySelector(".btn-add-folder");
+    const cerrarModalCarpeta = document.getElementById("cerrarModalCarpeta");
+    const cancelarCarpeta = document.getElementById("cancelarCarpeta");
+    const btnGuardar = document.getElementById("guardarCarpeta");
 
-    if ([...document.querySelectorAll(".folder-item")]
-        .some(f => f.textContent === nombre)) {
+    let creandoCarpeta = false;
 
-        alert("Esa carpeta ya existe");
+    btnAddFolder.addEventListener("click", () => {
+        modalCarpeta.classList.add("active");
+
+        setTimeout(() => {
+            document.getElementById("nombreCarpeta").focus();
+        }, 100);
+    });
+
+    cerrarModalCarpeta.onclick = cerrarModalCarpetaFn;
+    cancelarCarpeta.onclick = cerrarModalCarpetaFn;
+
+    modalCarpeta.addEventListener("click", (e) => {
+        if (e.target === modalCarpeta) {
+            cerrarModalCarpetaFn();
+        }
+    });
+
+    document.getElementById("nombreCarpeta").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            btnGuardar.click();
+        }
+    });
+
+    function cerrarModalCarpetaFn() {
+        modalCarpeta.classList.remove("active");
+        document.getElementById("nombreCarpeta").value = "";
+        document.getElementById("errorCarpeta").textContent = "";
+    }
+
+    // 🔥 AQUÍ VA TU GUARDAR (MODIFICADO)
+    btnGuardar.addEventListener("click", async () => {
+
+        if (creandoCarpeta) return;
+        creandoCarpeta = true;
+
+        const input = document.getElementById("nombreCarpeta");
+        const error = document.getElementById("errorCarpeta");
+
+        let nombre = input.value.trim();
+        error.textContent = "";
+
+        if (!nombre) {
+            error.textContent = "El nombre es obligatorio";
+            creandoCarpeta = false;
+            return;
+        }
+
+        if ([...document.querySelectorAll(".folder-name")]
+            .some(f => f.textContent.trim().toLowerCase() === nombre.toLowerCase())) {
+
+            error.textContent = "Esa carpeta ya existe";
+            creandoCarpeta = false;
+            return;
+        }
+
+        try {
+            const res = await fetch("/carpetas", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nombre })
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                error.textContent = err.error || "Error al crear carpeta";
+                creandoCarpeta = false;
+                return;
+            }
+
+            cerrarModalCarpetaFn();
+            await cargarCarpetas();
+            mostrarToast("Carpeta creada", "success");
+
+        } catch (err) {
+            console.error(err);
+            mostrarToast("Error inesperado", "error");
+        }
+
+        creandoCarpeta = false;
+    });
+
+});
+
+const modalEditarCarpeta = document.getElementById("modalEditarCarpeta");
+const cerrarEditarCarpeta = document.getElementById("cerrarEditarCarpeta");
+const cancelarEditarCarpeta = document.getElementById("cancelarEditarCarpeta");
+const inputEditarCarpeta = document.getElementById("inputEditarCarpeta");
+const errorEditarCarpeta = document.getElementById("errorEditarCarpeta");
+const btnGuardarEditarCarpeta = document.getElementById("guardarEditarCarpeta");
+
+let carpetaEditando = null;
+
+btnGuardarEditarCarpeta.addEventListener("click", async () => {
+
+    let nombre = inputEditarCarpeta.value.trim();
+    errorEditarCarpeta.textContent = "";
+
+    if (!nombre) {
+        errorEditarCarpeta.textContent = "El nombre es obligatorio";
         return;
     }
 
     try {
-
-        const res = await fetch("/carpetas", {
-            method: "POST",
+        const res = await fetch("/carpetas/" + carpetaEditando, {
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ nombre })
         });
 
         if (!res.ok) {
-            const error = await res.json();
-            alert(error.error || "Error al crear carpeta");
+            const err = await res.json();
+            errorEditarCarpeta.textContent = err.error || "Error";
             return;
         }
 
-        cargarCarpetas();
+        cerrarModalEditarCarpeta();
+        await cargarCarpetas();
+        mostrarToast("Carpeta actualizada", "success");
 
     } catch (err) {
-        alert("Error de conexión");
+        mostrarToast("Error de conexión", "error");
     }
+});
+
+function cerrarModalEditarCarpeta() {
+    modalEditarCarpeta.classList.remove("active");
+    inputEditarCarpeta.value = "";
+    errorEditarCarpeta.textContent = "";
+    carpetaEditando = null;
 }
 
-async function cargarCarpetas() {
+cerrarEditarCarpeta.onclick = cerrarModalEditarCarpeta;
+cancelarEditarCarpeta.onclick = cerrarModalEditarCarpeta;
 
+modalEditarCarpeta.addEventListener("click", (e) => {
+    if (e.target === modalEditarCarpeta) {
+        cerrarModalEditarCarpeta();
+    }
+});
+
+
+const modalEliminarCarpeta = document.getElementById("modalEliminarCarpeta");
+const cerrarEliminarCarpeta = document.getElementById("cerrarEliminarCarpeta");
+const cancelarEliminarCarpeta = document.getElementById("cancelarEliminarCarpeta");
+const confirmarEliminarCarpeta = document.getElementById("confirmarEliminarCarpeta");
+
+let carpetaAEliminar = null;
+
+function cerrarModalEliminarCarpeta() {
+    modalEliminarCarpeta.classList.remove("active");
+    carpetaAEliminar = null;
+}
+
+cerrarEliminarCarpeta.onclick = cerrarModalEliminarCarpeta;
+cancelarEliminarCarpeta.onclick = cerrarModalEliminarCarpeta;
+
+modalEliminarCarpeta.addEventListener("click", (e) => {
+    if (e.target === modalEliminarCarpeta) {
+        cerrarModalEliminarCarpeta();
+    }
+});
+
+confirmarEliminarCarpeta.addEventListener("click", async () => {
+
+    try {
+        const res = await fetch("/carpetas/" + carpetaAEliminar, {
+            method: "DELETE"
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            mostrarToast(err.error || "Error al eliminar", "error");
+            return;
+        }
+
+        cerrarModalEliminarCarpeta();
+
+        // 🔥 RESET DE ESTADO
+        carpetaActual = "Todas";
+        fechaSeleccionada = null;
+
+        await cargarCarpetas();
+        await cargarTareas();
+
+        // 🔥 APLICAR FILTRO A TODAS
+        aplicarFiltros();
+
+        mostrarToast("Carpeta eliminada", "success");
+
+    } catch (err) {
+        mostrarToast("Error de conexión", "error");
+    }
+});
+
+
+
+
+async function cargarCarpetas() {
     const res = await fetch("/carpetas");
 
     if (!res.ok) {
@@ -160,7 +389,7 @@ async function cargarCarpetas() {
     const select = document.getElementById("task-folder");
 
     lista.innerHTML = `
-        <li class="folder-item active" onclick="seleccionarCarpeta('Todas', this)">
+        <li class="folder-item" data-id="Todas" onclick="seleccionarCarpeta('Todas', this)">
             <span class="folder-icon">📁</span>
             <span class="folder-name">Todas</span>
         </li>
@@ -174,12 +403,36 @@ async function cargarCarpetas() {
 
         const li = document.createElement("li");
         li.classList.add("folder-item");
+        li.dataset.id = carpeta.id; 
 
         li.innerHTML = `
             <span class="folder-icon">📁</span>
             <span class="folder-name">${carpeta.nombre}</span>
-            <span class="arrow"></span>
+            <div class="folder-actions">
+                <button class="edit-folder">✏️</button>
+                <button class="delete-folder">🗑️</button>
+                <span class="arrow"></span>
+            </div>
         `;
+
+        li.querySelector(".edit-folder").onclick = (e) => {
+            e.stopPropagation();
+            carpetaEditando = carpeta.id;
+            inputEditarCarpeta.value = carpeta.nombre;
+
+            modalEditarCarpeta.classList.add("active");
+
+            setTimeout(() => {
+                inputEditarCarpeta.focus();
+            }, 100);
+        };
+
+        li.querySelector(".delete-folder").onclick = (e) => {
+            e.stopPropagation();
+
+            carpetaAEliminar = carpeta.id;
+            modalEliminarCarpeta.classList.add("active");
+        };
 
         const subList = document.createElement("ul");
         subList.classList.add("subtasks");
@@ -217,12 +470,51 @@ async function cargarCarpetas() {
 
         select.appendChild(option);
     });
+    setTimeout(() => {
+
+        const elementoActivo = document.querySelector(
+            `.folder-item[data-id="${carpetaActual}"]`
+        );
+
+        if (elementoActivo) {
+            document.querySelectorAll(".folder-item")
+                .forEach(f => f.classList.remove("active"));
+
+            elementoActivo.classList.add("active");
+        }
+        aplicarFiltros();
+    }, 0);  
+}
+
+function editarCarpeta(id, nombreActual) {
+    const nuevoNombre = prompt("Nuevo nombre de la carpeta:", nombreActual);
+    if (!nuevoNombre) return;
+
+    fetch("/carpetas/" + id, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: nuevoNombre })
+    }).then(() => {
+        cargarCarpetas();
+        mostrarToast("Carpeta actualizada", "success");
+    });
+}
+
+function eliminarCarpeta(id) {
+    if (!confirm("¿Eliminar esta carpeta?")) return;
+
+    fetch("/carpetas/" + id, {
+        method: "DELETE"
+    }).then(() => {
+        cargarCarpetas();
+        mostrarToast("Carpeta eliminada", "success");
+    });
 }
 
 function renderCalendar() {
     const grid = document.getElementById("calendar-grid");
     const title = document.getElementById("calendar-title");
-    if (!grid || !title) return; // Validación de seguridad
+    if (!grid || !title) return;
 
     grid.innerHTML = "";
     const year = fechaActual.getFullYear();
@@ -251,13 +543,23 @@ function renderCalendar() {
 
         // VALIDACIÓN ANTI-ERRORES:
         const tieneTarea = tareasGlobal.some(t => {
-            if (!t.fecha) return false; 
-            
-            const fechaTarea = new Date(t.fecha);
-            // Si la fecha es inválida, getTime() devuelve NaN
-            if (isNaN(fechaTarea.getTime())) return false; 
+            if (!t.fecha) return false;
 
-            const fechaStrTarea = fechaTarea.toISOString().split('T')[0];
+            if (t.estado === "completada") return false;
+
+            const [y, m, d] = t.fecha.split("T")[0].split("-");
+            const fechaUTC = new Date(t.fecha);
+
+            // 🔥 convertir a LOCAL sin desfase
+            const fechaLocal = new Date(
+                fechaUTC.getUTCFullYear(),
+                fechaUTC.getUTCMonth(),
+                fechaUTC.getUTCDate()
+            );
+            const fechaStrTarea = fechaLocal.getFullYear() + "-" +
+                String(fechaLocal.getMonth() + 1).padStart(2, '0') + "-" +
+                String(fechaLocal.getDate()).padStart(2, '0');
+
             return fechaStrTarea === fechaStr;
         });
 
@@ -295,13 +597,25 @@ function actualizarInfoFiltros() {
 
     let html = "";
 
-    const carpetaNombre = document.querySelector(".folder-item.active")?.textContent || "Todas";
+    let carpetaNombre = "Todas";
+    
+    if (carpetaActual !== "Todas") {
+        const carpeta = document.querySelector(
+            `.folder-item.active .folder-name`
+        );
 
-    html += `<span class="filter-badge"> ${carpetaNombre}</span>`;
+        if (carpeta) {
+            carpetaNombre = carpeta.textContent;
+        }
+    }
+
+    html += `<span class="filter-badge">📁 ${carpetaNombre}</span>`;
 
     if (fechaSeleccionada) {
 
-        const fecha = new Date(fechaSeleccionada);
+        const [year, month, day] = fechaSeleccionada.split("-");
+
+        const fecha = new Date(year, month - 1, day);
 
         const fechaFormateada = fecha.toLocaleDateString("es-ES", {
             day: "numeric",
@@ -315,7 +629,49 @@ function actualizarInfoFiltros() {
         html += `<span class="filter-badge">📅 Todas las fechas</span>`;
     }
 
+    let estadoTexto = "Todos los estados";
+
+    if (estadoSeleccionado === "pendiente") {
+        estadoTexto = "Pendiente";
+    } else if (estadoSeleccionado === "en progreso") {
+        estadoTexto = "En progreso";
+    } else if (estadoSeleccionado === "completada") {
+        estadoTexto = "Completada";
+    }
+
+    html += `<span class="filter-badge">📌 ${estadoTexto}</span>`;
+
+    // 🔥 BOTÓN LIMPIAR (solo si hay filtros activos)
+    if (carpetaNombre !== "Todas" || fechaSeleccionada || estadoSeleccionado !== "todos") {
+        html += `
+        <button class="btn-clear-filters" onclick="limpiarFiltros()">
+            <span>✕</span> Limpiar
+        </button>
+        `;
+    }
+
     info.innerHTML = html;
+}
+
+function limpiarFiltros() {
+
+    // reset carpeta
+    carpetaActual = "Todas";
+
+    document.querySelectorAll(".folder-item")
+        .forEach(f => f.classList.remove("active"));
+
+    const todas = document.querySelector(".folder-item");
+    if (todas) todas.classList.add("active");
+
+    // reset fecha
+    fechaSeleccionada = null;
+
+    document.querySelectorAll(".day")
+        .forEach(d => d.classList.remove("day-selected"));
+
+    estadoSeleccionado = "todos";
+    aplicarFiltros();
 }
 
 document.getElementById("prev-month").onclick = () => {
@@ -425,6 +781,7 @@ async function cargarTareas(){
                 <p>Crea una nueva tarea para comenzar</p>
             </div>
         `
+        await cargarCarpetas();
         return
     }
 
@@ -485,17 +842,14 @@ async function cargarTareas(){
     })
     tareasGlobal = tareas;
 
-    cargarCarpetas();
+    await cargarCarpetas();
 
 }
 
 async function cambiarEstado(id, nuevoEstado) {
     try {
-        // Buscamos la tarea actual en tareasGlobal (ya la tienes cargada, no necesitas otro fetch inicial)
         const tarea = tareasGlobal.find(t => t.id === id);
 
-        // Convertimos la fecha a formato YYYY-MM-DD
-        // Esto evita el error "Incorrect date value"
         const fechaISO = new Date(tarea.fecha).toISOString().split('T')[0];
 
         const response = await fetch("/tareas/" + id, {
@@ -508,7 +862,8 @@ async function cambiarEstado(id, nuevoEstado) {
                 descripcion: tarea.descripcion,
                 estado: nuevoEstado,
                 color: tarea.color,
-                fecha: fechaISO // Enviamos la fecha limpia
+                fecha: fechaISO,
+                carpeta_id: tarea.carpeta_id
             })
         });
 
@@ -519,7 +874,27 @@ async function cambiarEstado(id, nuevoEstado) {
         }
 
         mostrarToast("Estado actualizado", "success");
-        cargarTareas();
+        const carpetaAntes = carpetaActual;
+
+        await cargarTareas();
+        await cargarCarpetas();
+
+        // restaurar carpeta
+        carpetaActual = carpetaAntes;
+
+        document.querySelectorAll(".folder-item")
+            .forEach(f => f.classList.remove("active"));
+
+        const carpetaElemento = document.querySelector(
+            `.folder-item[data-id="${carpetaAntes}"]`
+        );
+
+        if (carpetaElemento) {
+            carpetaElemento.classList.add("active");
+        }
+
+        aplicarFiltros();
+        actualizarInfoFiltros();
 
     } catch (err) {
         console.error(err);
@@ -551,8 +926,9 @@ btnConfirmarEliminar.addEventListener("click", async () => {
 
     cerrarEliminarModal()
 
-    cargarTareas()
+    await cargarTareas()
     await cargarCarpetas();
+    await cargarAnalisis();
 })
 
 btnCerrarEliminar.addEventListener("click", cerrarEliminarModal)
@@ -617,6 +993,11 @@ async function editarTarea(id){
     const tarea = tareas.find(t => t.id === id)
 
     tareaEditando = id
+    // 🔥 SOLO cambiar carpeta si NO estás en "Todas"
+    if (carpetaActual !== "Todas") {
+        carpetaActual = tarea.carpeta_id || "Todas";
+    }
+    await cargarCarpetas()
 
     document.getElementById("modalTitle").textContent = "Editar Tarea"
     document.getElementById("btnGuardar").textContent = "Guardar cambios"
@@ -649,17 +1030,67 @@ async function editarTarea(id){
         if (btn) btn.classList.add("active")
     }
     //document.getElementById("fecha").value = tarea.fecha
+
     document.getElementById("task-folder").value = tarea.carpeta_id || ""
+
+    const fechaUTC = new Date(tarea.fecha);
+
+    const fechaLocal = new Date(
+        fechaUTC.getUTCFullYear(),
+        fechaUTC.getUTCMonth(),
+        fechaUTC.getUTCDate()
+    );
+
     document.getElementById("fecha").value =
-        new Date(tarea.fecha).toISOString().split("T")[0]
+        fechaLocal.toISOString().split("T")[0];
+
+    document.getElementById("titulo")._actualizarContador();
+    document.getElementById("descripcion")._actualizarContador();
 
     limpiarErrores() 
     actualizarBoton() 
-    await cargarTareas();
-    await cargarCarpetas();
     modal.classList.add("active")
 
 }
+
+function setupContador(input, contador, max) {
+
+    function actualizar() {
+        const length = input.value.length;
+
+        contador.textContent = `${length} / ${max}`;
+
+        contador.classList.remove("warning", "limit");
+
+        if (length >= max) {
+            contador.classList.add("limit");
+        } else if (length >= max * 0.8) {
+            contador.classList.add("warning");
+        }
+    }
+
+    input.addEventListener("input", actualizar);
+
+    input._actualizarContador = actualizar;
+
+    actualizar();
+}
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    setupContador(
+        document.getElementById("titulo"),
+        document.getElementById("contadorTitulo"),
+        100
+    );
+
+    setupContador(
+        document.getElementById("descripcion"),
+        document.getElementById("contadorDescripcion"),
+        500
+    );
+});
+
 
 
 /* MODAL */
@@ -770,13 +1201,33 @@ document.getElementById("formNuevaTarea").addEventListener("submit", async funct
             return
         }
 
-        tareaEditando = null
-        this.reset()
-        cerrar()
-        cargarTareas()
-        await cargarTareas(); 
-        await cargarCarpetas(); 
-        mostrarToast("Tarea guardada correctamente", "success")
+    const carpetaAntes = carpetaActual;
+
+    tareaEditando = null
+    this.reset()
+    cerrar()
+
+    document.getElementById("titulo")._actualizarContador();
+    document.getElementById("descripcion")._actualizarContador();
+
+    await cargarTareas(); 
+    await cargarCarpetas(); 
+
+    carpetaActual = carpetaAntes;
+
+    document.querySelectorAll(".folder-item")
+        .forEach(f => f.classList.remove("active"));
+
+    const carpetaElemento = Array.from(document.querySelectorAll(".folder-item"))
+        .find(f => f.textContent.trim() === carpetaAntes);
+
+    if (carpetaElemento) {
+        carpetaElemento.classList.add("active");
+    }
+
+    aplicarFiltros();
+
+    mostrarToast("Tarea guardada correctamente", "success")
 
     } catch (err) {
         mostrarToast("Error de conexión con el servidor", "error")
@@ -813,8 +1264,21 @@ btnNuevaTarea.addEventListener("click", () => {
 
     document.getElementById("formNuevaTarea").reset()
 
+    const selectCarpeta = document.getElementById("task-folder");
+
+    if (carpetaActual && carpetaActual !== "Todas") {
+        selectCarpeta.value = carpetaActual;
+    } else {
+        selectCarpeta.value = "";
+    }
+
     const botonesColor = document.querySelectorAll(".color-btn")
     botonesColor.forEach(b => b.classList.remove("active"))
+
+    setTimeout(() => {
+        document.getElementById("titulo")._actualizarContador();
+        document.getElementById("descripcion")._actualizarContador();
+    }, 0);
 
     document.getElementById("color").value = ""
     const selectEstado = document.getElementById("estado")
@@ -1002,3 +1466,515 @@ function exportarExcelCompleto() {
     // Generar archivo
     XLSX.writeFile(libro, "Reporte_TaskFlow_Sincronizado.xlsx");
 }
+
+
+
+
+
+
+let chartEstados = null;
+
+async function cargarAnalisis() {
+    const response = await fetch("/tareas");
+    const tareas = await response.json();
+
+    const canvas = document.getElementById("graficoEstados");
+    const mensaje = document.getElementById("sinDatosEstados");
+
+    if (tareas.length === 0) {
+        canvas.style.visibility = "hidden";
+        mensaje.style.display = "flex";
+        mensaje.innerHTML = `
+            <div class="icono">📊</div>
+            <p>No hay datos para mostrar</p>
+        `;
+        cargarGraficoCarpetas([]);
+        cargarGraficoFechas(tareas);
+        cargarGraficoProductividad(tareas);
+
+        return;
+    } else {
+        canvas.style.visibility = "visible";
+        mensaje.style.display = "none";
+    }
+
+    let pendientes = 0;
+    let progreso = 0;
+    let completadas = 0;
+
+    tareas.forEach(t => {
+        if (t.estado === "pendiente") pendientes++;
+        else if (t.estado === "en progreso") progreso++;
+        else if (t.estado === "completada") completadas++;
+    });
+
+    // KPIs
+    document.getElementById("total").textContent = tareas.length;
+    document.getElementById("pendientes").textContent = pendientes;
+    document.getElementById("progreso").textContent = progreso;
+    document.getElementById("completadas").textContent = completadas;
+
+    const labels = [];
+    const data = [];
+    const colors = [];
+
+    if (pendientes > 0) {
+        labels.push("Pendientes");
+        data.push(pendientes);
+        colors.push("#dab934");
+    }
+
+    if (progreso > 0) {
+        labels.push("En progreso");
+        data.push(progreso);
+        colors.push("#3471d3");
+    }
+
+    if (completadas > 0) {
+        labels.push("Completadas");
+        data.push(completadas);
+        colors.push("#27d165");
+    }
+
+    if (chartEstados) {
+        chartEstados.destroy();
+    }
+
+    const ctx = canvas;
+
+    chartEstados = new Chart(ctx, {
+        type: "pie",
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: "bottom"
+                },
+                datalabels: {
+                    font: {
+                        weight: "bold",
+                        size: 12
+                    },
+                    formatter: (value) => value,
+                    color: "#fff"
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+    setTimeout(() => {
+    chartEstados.resize();
+    }, 100);
+    cargarGraficoCarpetas(tareas);
+    cargarGraficoFechas(tareas);
+    cargarGraficoProductividad(tareas);
+}
+
+
+
+
+
+
+let chartCarpetas = null;
+
+function cargarGraficoCarpetas(tareas) {
+    console.log("🔥 ENTRE A GRAFICO CARPETAS");
+
+    const canvas = document.getElementById("graficoCarpetas");
+    const mensaje = document.getElementById("sinDatosCarpetas");
+
+    const conteo = {};
+
+    
+    tareas.forEach(t => {
+        const nombre = t.carpeta_nombre || "Sin carpeta";
+
+        if (!conteo[nombre]) {
+            conteo[nombre] = 0;
+        }
+
+        conteo[nombre]++;
+    });
+
+    
+    const labels = Object.keys(conteo);
+    const data = Object.values(conteo);
+
+    if (tareas.length === 0) {
+        if (chartCarpetas) {
+            chartCarpetas.destroy();
+            chartCarpetas = null;
+        }
+
+        canvas.style.display = "none";
+        mensaje.style.display = "flex";
+        return;
+    } else {
+        canvas.style.display = "block";
+        mensaje.style.display = "none";
+    }
+
+    if (chartCarpetas) {
+        chartCarpetas.destroy();
+    }
+
+    chartCarpetas = new Chart(canvas, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Tareas",
+                data: data
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+    console.log("TAREAS EN GRAFICO:", tareas.length);
+}
+
+
+
+
+
+let chartFechas = null;
+
+function cargarGraficoFechas(tareas) {
+
+    const canvas = document.getElementById("graficoFechas");
+    const mensaje = document.getElementById("sinDatosFechas");
+
+    const hoy = new Date();
+    const fechas = [];
+
+    for (let i = 0; i < 14; i++) {
+        const fecha = new Date(
+            hoy.getFullYear(),
+            hoy.getMonth(),
+            hoy.getDate() + i
+        );
+
+        const formateada =
+            fecha.getFullYear() + "-" +
+            String(fecha.getMonth() + 1).padStart(2, "0") + "-" +
+            String(fecha.getDate()).padStart(2, "0");
+
+        fechas.push(formateada);
+    }
+
+    const conteo = {};
+    fechas.forEach(f => conteo[f] = 0);
+
+    tareas.forEach(t => {
+        if (!t.fecha) return;
+
+        // 🔥 ignorar completadas
+        if (t.estado === "completada") return;
+
+        // 🔥 convertir UTC → LOCAL
+        const fechaUTC = new Date(t.fecha);
+
+        const fechaObj = new Date(
+            fechaUTC.getUTCFullYear(),
+            fechaUTC.getUTCMonth(),
+            fechaUTC.getUTCDate()
+        );
+
+        const fecha =
+            fechaObj.getFullYear() + "-" +
+            String(fechaObj.getMonth() + 1).padStart(2, "0") + "-" +
+            String(fechaObj.getDate()).padStart(2, "0");
+
+        if (conteo.hasOwnProperty(fecha)) {
+            conteo[fecha]++;
+        }
+    });
+
+    const labels = fechas.map(f => {
+        const [y, m, d] = f.split("-");
+        const fechaLocal = new Date(y, m - 1, d);
+
+        return fechaLocal.toLocaleDateString("es-AR", {
+            day: "2-digit",
+            month: "2-digit"
+        });
+    });
+
+    const data = Object.values(conteo);
+    const hayDatos = data.some(v => v > 0);
+
+    if (!hayDatos) {
+        if (chartFechas) {
+            chartFechas.destroy();
+            chartFechas = null;
+        }
+
+        canvas.style.display = "none";
+        mensaje.style.display = "flex";
+        mensaje.innerHTML = `
+            <div class="icono">📅</div>
+            <p>No hay tareas en los próximos días</p>
+        `;
+        return;
+    } else {
+        canvas.style.display = "block";
+        mensaje.style.display = "none";
+    }
+
+    if (chartFechas) {
+        chartFechas.destroy();
+    }
+
+    chartFechas = new Chart(canvas, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Tareas",
+                data: data,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+}
+
+
+
+let chartProductividad = null;
+
+function cargarGraficoProductividad(tareas) {
+
+    const canvas = document.getElementById("graficoProductividad");
+    const mensaje = document.getElementById("sinDatosProductividad");
+
+    const completadas = tareas.filter(t => t.estado === "completada");
+
+    if (completadas.length === 0) {
+        if (chartProductividad) {
+            chartProductividad.destroy();
+            chartProductividad = null;
+        }
+
+        canvas.style.display = "none";
+        mensaje.style.display = "flex";
+        return;
+    } else {
+        canvas.style.display = "block";
+        mensaje.style.display = "none";
+    }
+
+    const conteo = {};
+
+    completadas.forEach(t => {
+        if (!t.fecha) return;
+
+        const fecha = new Date(t.fecha);
+
+        const inicioAño = new Date(fecha.getFullYear(), 0, 1);
+        const dias = Math.floor((fecha - inicioAño) / (1000 * 60 * 60 * 24));
+        const semana = Math.ceil((dias + inicioAño.getDay() + 1) / 7);
+
+        const clave = `${fecha.getFullYear()} - Sem. ${semana}`;
+
+        if (!conteo[clave]) {
+            conteo[clave] = 0;
+        }
+
+        conteo[clave]++;
+    });
+
+    const ordenado = Object.entries(conteo)
+        .sort((a, b) => {
+            const [aYear, aSemana] = a[0].split(" - Semana ");
+            const [bYear, bSemana] = b[0].split(" - Semana ");
+
+            // ordenar por año primero
+            if (aYear !== bYear) {
+                return aYear - bYear;
+            }
+
+            // luego por número de semana
+            return aSemana - bSemana;
+        });
+
+    const labels = ordenado.map(item => item[0]);
+    const data = ordenado.map(item => item[1]);
+
+    if (chartProductividad) {
+        chartProductividad.destroy();
+    }
+
+    chartProductividad = new Chart(canvas, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Completadas",
+                data: data,
+
+                borderWidth: 2,
+                tension: 0.4,
+
+                fill: false,
+
+                pointRadius: 5, 
+                pointHoverRadius: 7,
+
+                borderColor: "#111",
+                pointBackgroundColor: "#111"
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: "bottom"
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    },
+                    grid: {
+                        drawBorder: false,
+                        borderDash: [5, 5]
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+document.addEventListener("DOMContentLoaded", () => {
+
+    const sidebar = document.querySelector(".sidebar");
+    const toggleBtn = document.getElementById("toggleSidebar");
+
+    function isMobile() {
+        return window.innerWidth <= 900;
+    }
+
+    let state = localStorage.getItem("sidebarState");
+
+    // 🔥 primera vez → cerrado por defecto
+    if (state === null) {
+        state = "collapsed";
+        localStorage.setItem("sidebarState", state);
+    }
+
+    function applyState() {
+
+        // 💻 DESKTOP: SIEMPRE ABIERTO
+        if (!isMobile()) {
+            sidebar.classList.remove("collapsed");
+            toggleBtn.textContent = "✕";
+            return;
+        }
+
+        // 📱 MOBILE: usa estado guardado
+        const collapsed = state === "collapsed";
+
+        sidebar.classList.toggle("collapsed", collapsed);
+        toggleBtn.textContent = collapsed ? "☰" : "✕";
+    }
+
+    applyState();
+
+    toggleBtn.addEventListener("click", () => {
+
+        // solo funciona en mobile
+        if (!isMobile()) return;
+
+        const collapsed = sidebar.classList.toggle("collapsed");
+
+        state = collapsed ? "collapsed" : "expanded";
+        localStorage.setItem("sidebarState", state);
+
+        toggleBtn.textContent = collapsed ? "☰" : "✕";
+    });
+
+    // 🔥 si cambias tamaño de pantalla (muy importante)
+    window.addEventListener("resize", () => {
+        applyState();
+    });
+});
+
+
+
+
+
+const btnTareas = document.getElementById("btnTareas");
+const btnAnalisis = document.getElementById("btnAnalisis");
+
+const vistaTareas = document.getElementById("vistaTareas");
+const vistaAnalisis = document.getElementById("vistaAnalisis");
+
+btnTareas.addEventListener("click", () => {
+    btnTareas.classList.add("active");
+    btnAnalisis.classList.remove("active");
+
+    
+    vistaTareas.style.display = "flex";
+    vistaAnalisis.style.display = "none";
+});
+
+btnAnalisis.addEventListener("click", () => {
+    btnAnalisis.classList.add("active");
+    btnTareas.classList.remove("active");
+
+    vistaTareas.style.display = "none";
+    vistaAnalisis.style.display = "block";
+
+    cargarAnalisis();
+});
+
+

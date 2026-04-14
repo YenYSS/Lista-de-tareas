@@ -3,34 +3,38 @@
 <head>
     <title>Gestor de Tareas</title>
     <link rel="stylesheet" href="static/css/styles.css">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='img/Checky_3.png') }}">
 </head>
 <body>
 <header class="header">
 
-    <div class="header-left">
+<div class="header-left">
+    <img src="{{ url_for('static', filename='img/Checky_3.png') }}" alt="Logo Checky" class="logo-img">
 
-        <div class="logo-box">
-            ✔
-        </div>
-
-        <div class="title-container">
-            <h1>TaskFlow</h1>
-            <span id="task-count">0 tareas</span>
-        </div>
-
+    <div class="title-container">
+        <h1>Checky</h1>
+        <span id="task-count">0 tareas</span>
     </div>
+</div>
 
     <div class="header-right">
+        <div class="view-toggle">
+            <button id="btnTareas" class="active">Tareas</button>
+            <button id="btnAnalisis">Análisis</button>
+        </div>
         <button class="btn-new-task">+ Nueva tarea</button>
     </div>
 
 </header>
 
-<div class="app-container">
+<div class="app-container" id="vistaTareas">
     <aside class="sidebar">
+        <button id="toggleSidebar" class="sidebar-toggle">☰</button>
         
         <div class="calendar-section">
             <div id="mini-calendar">
@@ -66,12 +70,85 @@
     </aside>
 
     <section class="tasks-section">
+        <div class="estado-filtros">
+
+        <button onclick="filtrarPorEstado('todos', this)">Todas</button>
+        <button onclick="filtrarPorEstado('pendiente', this)">Pendiente</button>
+        <button onclick="filtrarPorEstado('en progreso', this)">En progreso</button>
+        <button onclick="filtrarPorEstado('completada', this)">Completada</button>
+
+        </div>
         <div id="filters-info" class="filters-info"></div>
 
         <div class="tasks-container" id="tasks-container"></div>
     </section>
 
 </div>
+
+<div id="vistaAnalisis" style="display:none;">
+
+    <h2 class="titulo-analisis">📊 Análisis</h2>
+
+    <div class="kpis">
+        <div class="kpi-card">Total<br><span id="total"><br>0</span></div>
+        <div class="kpi-card">Pendientes<br><span id="pendientes"><br>0</span></div>
+        <div class="kpi-card">En progreso<br><span id="progreso"><br>0</span></div>
+        <div class="kpi-card">Completadas<br><span id="completadas"><br>0</span></div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <h3>Distribución de estados</h3>
+
+            <div class="contenedor-grafico">
+                <canvas id="graficoEstados"></canvas>
+
+                <div id="sinDatosEstados" class="estado-vacio" style="display:none;">
+                    <div class="icono">📊</div>
+                    <p>No hay datos para mostrar</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Tareas por carpeta</h3>
+
+            <div class="contenedor-grafico">
+                <canvas id="graficoCarpetas"></canvas>
+
+                <div id="sinDatosCarpetas" class="estado-vacio" style="display:none;">
+                    <div class="icono">📁</div>
+                    <p>No hay datos para mostrar</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Próximos 14 días</h3>
+        <div class="contenedor-grafico">
+            <canvas id="graficoFechas"></canvas>
+            <div id="sinDatosFechas" class="estado-vacio" style="display:none;">
+                <div class="icono">📅</div>
+                <p>No hay datos para mostrar</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Productividad semanal</h3>
+
+        <div class="contenedor-grafico">
+            <canvas id="graficoProductividad"></canvas>
+
+            <div id="sinDatosProductividad" class="estado-vacio" style="display:none;">
+                <div class="icono">⏱️</div>
+                <p>No hay datos de productividad</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <div class="modal-overlay" id="modalNuevaTarea">
 
@@ -90,13 +167,15 @@
 
             <div class="form-group">
                 <label>Nombre de la tarea</label>
-                <input type="text" id="titulo" placeholder="Ej: Revisar documentación">
+                <input type="text" id="titulo" maxlength="100" placeholder="Ej: Revisar documentación">
+                <div class="char-counter" id="contadorTitulo">0 / 100</div>
                 <small id="error-titulo" class="error"></small>
             </div>
 
             <div class="form-group">
                 <label>Descripción</label>
-                <textarea id="descripcion" placeholder="Describe los detalles de la tarea..."></textarea>
+                <textarea id="descripcion" maxlength="500" placeholder="Describe los detalles de la tarea..."></textarea>
+                <div class="char-counter" id="contadorDescripcion">0 / 500</div>
                 <small id="error-descripcion" class="error"></small>
             </div>
 
@@ -176,6 +255,78 @@
         <div class="modal-buttons">
             <button class="btn-cancelar" id="cancelarEliminar">Cancelar</button>
             <button class="btn-eliminar" id="confirmarEliminar">Eliminar</button>
+        </div>
+
+    </div>
+
+</div>
+
+<div id="modalCarpeta" class="folder-overlay">
+
+    <div class="folder-modal">
+
+        <div class="folder-header">
+            <h2>Nueva carpeta</h2>
+            <button class="folder-close" id="cerrarModalCarpeta">✕</button>
+        </div>
+
+        <div class="folder-body">
+            <label>Nombre</label>
+            <input type="text" id="nombreCarpeta" placeholder="Ej: Backend">
+            <span id="errorCarpeta" class="error-text"></span>
+        </div>
+
+        <div class="folder-buttons">
+            <button class="btn-cancelar" id="cancelarCarpeta">Cancelar</button>
+            <button class="btn-guardar" id="guardarCarpeta">Guardar</button>
+        </div>
+
+    </div>
+</div>
+
+<div class="folder-overlay" id="modalEditarCarpeta">
+
+    <div class="folder-modal">
+
+        <div class="folder-header">
+            <h3>Editar carpeta</h3>
+            <button class="folder-close" id="cerrarEditarCarpeta">✖</button>
+        </div>
+
+        <div class="folder-body">
+            <label>Nombre</label>
+            <input type="text" id="inputEditarCarpeta">
+            <span id="errorEditarCarpeta" class="error-text"></span>
+        </div>
+
+        <div class="folder-buttons">
+            <button class="btn-cancelar" id="cancelarEditarCarpeta">Cancelar</button>
+            <button class="btn-guardar" id="guardarEditarCarpeta">Guardar</button>
+        </div>
+
+    </div>
+
+</div>
+
+<div class="folder-overlay" id="modalEliminarCarpeta">
+
+    <div class="folder-modal">
+
+        <div class="folder-header">
+            <h3>Eliminar carpeta</h3>
+            <button class="folder-close" id="cerrarEliminarCarpeta">✖</button>
+        </div>
+
+        <div class="folder-body">
+            <p>¿Seguro que deseas eliminar esta carpeta?</p>
+            <p style="font-size:12px; color:#6b7280;">
+                Las tareas se moverán a "Sin carpeta"
+            </p>
+        </div>
+
+        <div class="folder-buttons">
+            <button class="btn-cancelar" id="cancelarEliminarCarpeta">Cancelar</button>
+            <button class="btn-eliminar" id="confirmarEliminarCarpeta">Eliminar</button>
         </div>
 
     </div>

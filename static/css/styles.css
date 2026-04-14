@@ -22,17 +22,60 @@ body{
     gap:15px;
 }
 
-.logo-box{
-    background:black;
-    color:white;
-    width:40px;
-    height:40px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:6px;
-    font-size:18px;
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
+
+.logo-img {
+    width: 45px; /* Un pelín más grande para que luzcan los detalles */
+    height: 45px;
+    object-fit: contain;
+    /* No necesitas background ni border-radius si la imagen ya es circular */
+    transition: transform 0.3s ease; /* Un toque extra */
+}
+
+.logo-img:hover {
+    transform: scale(1.1) rotate(5deg); /* Efecto juguetón al pasar el mouse */
+}
+
+.estado-filtros {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+/* BOTONES */
+.estado-filtros button {
+    padding: 6px 10px;
+    border-radius: 8px;
+
+    border: 1px solid #e5e7eb;
+    background: #fff;
+
+    font-size: 12px;
+    color: #374151;
+
+    cursor: pointer;
+
+    transition: all 0.2s ease;
+}
+
+/* HOVER */
+.estado-filtros button:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+/* ACTIVO */
+.estado-filtros button.active {
+    background: #111827;
+    color: #fff;
+    border-color: #111827;
+}
+/* Si decides quitar el logo-box, puedes borrar sus reglas anteriores */
 
 /* titulo */
 
@@ -59,19 +102,20 @@ body{
 
 @media (max-width:600px){
 
-.header{
-    padding:15px 20px;
-}
+    .header{
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
 
 .header-left{
     width:100%;
 }
 
-.header-right{
-    width:100%;
-    display:flex;
-    justify-content:flex-end;
-}
+    .header-right{
+        width: 100%;
+        justify-content: space-between;
+    }
 
 .title-container h1{
     font-size:18px;
@@ -115,6 +159,11 @@ body{
     background: #f3f4f6;
     padding: 5px 10px;
     border-radius: 6px;
+}
+@media (max-width: 768px) {
+    .filters-info {
+        justify-content: center;
+    }
 }
 
 
@@ -326,6 +375,8 @@ body{
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    word-break: break-all;
+    overflow-wrap: break-word;
 }
 
 
@@ -746,7 +797,7 @@ button:disabled {
   background: #dc3545;
 }
 
-    /* CONTENEDOR GENERAL */
+/* CONTENEDOR GENERAL */
     .app-container {
         display: flex;
         height: calc(100vh - 70px);
@@ -762,8 +813,6 @@ button:disabled {
         flex-direction: column;
         gap: 20px;
         border-right: 1px solid #E2E2E2;
-        overflow-y: auto;
-
 }
 
 .tasks-section {
@@ -775,6 +824,7 @@ button:disabled {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    flex-shrink: 0;
 }
 
 /* CALENDARIO */
@@ -784,6 +834,13 @@ button:disabled {
     border-radius: 8px;
     flex: 1;
     min-height: 0;
+}
+
+.folders-section {
+    flex: 1; /* 🔥 ocupa el espacio restante */
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* 🔥 IMPORTANTE para que funcione el scroll */
 }
 
 /* CONTENEDOR */
@@ -801,6 +858,9 @@ button:disabled {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    overflow-y: auto; /* 🔥 scroll aquí */
+    max-height: 100%;
+
 }
 
 /* ITEM */
@@ -976,28 +1036,168 @@ button:disabled {
     border-radius: 6px;
     font-size: 11px;
 
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }
 
 .calendar-grid div:hover {
-    background: #e2e2e2;  
-    transform: scale(1.10)
+    background: #e5e7eb;  
+    transform: scale(1.08)
 }
 
 .day-task {
-    background: #dbeafe;
+    background: #eef2ff;
     color: #1d4ed8;
+}
+
+.day {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: fadeInDay 0.3s ease forwards;
+}
+
+.day:nth-child(1) { animation-delay: 0.02s; }
+.day:nth-child(2) { animation-delay: 0.04s; }
+.day:nth-child(3) { animation-delay: 0.06s; }
+
+@keyframes fadeInDay {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.calendar-grid {
+    animation: fadeCalendar 0.25s ease;
+}
+
+@keyframes fadeCalendar {
+    from {
+        opacity: 0;
+        transform: translateX(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+.calendar-grid div:active {
+    transform: scale(0.95);
+}
+
+.day-task::after {
+    content: "";
+    position: absolute;
+    bottom: 4px;
+    width: 5px;
+    height: 5px;
+    background: #2563eb;
+    border-radius: 50%;
 }
 
 .day-selected {
     background: #111827;
     color: white;
+    transform: scale(1.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    transition: all 0.2s ease;
 }
 
 .day-selected.day-task {
     background: #2563eb;
     color: white;
 }
+
+.sidebar-toggle{
+    display: none;
+}
+
+.sidebar-toggle {
+    display: none;
+}
+
+/* SOLO MÓVIL */
+@media (max-width: 900px) {
+    .sidebar-toggle {
+        display: block;
+    }
+}
+@media (max-width: 900px) {
+
+    .app-container {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #E2E2E2;
+        flex-direction: row;
+        overflow-x: auto;
+        gap: 15px;
+    }
+
+    .calendar-section,
+    .folders-section {
+        min-width: 260px;
+        flex-shrink: 0;
+    }
+
+    .tasks-section {
+        width: 100%;
+        height: auto;
+        overflow: visible;
+    }
+}
+
+.sidebar {
+    width: 280px;
+    transition: all 0.3s ease;
+}
+
+/* BOTÓN TOGGLE */
+.sidebar-toggle {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    align-self: flex-start;
+}
+
+/* ESTADO COLAPSADO */
+.sidebar.collapsed {
+    width: 60px;
+    padding: 10px 5px;
+}
+
+/* ocultar contenido cuando colapsa */
+.sidebar.collapsed .calendar-section,
+.sidebar.collapsed .folders-section {
+    display: none;
+}
+
+/* tasks se expande automáticamente */
+.sidebar.collapsed + .tasks-section {
+    width: calc(100% - 20px);
+}
+
+@media (max-width: 600px) {
+
+    .sidebar {
+        flex-direction: column;
+    }
+
+    .calendar-section,
+    .folders-section {
+        width: 100%;
+    }
+}
+
+
+
+
+
 
 
 .btn-export {
@@ -1022,4 +1222,354 @@ button:disabled {
     background-color: #f8f9fa;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.char-counter {
+    font-size: 11px;
+    color: #888;
+    text-align: right;
+    margin-top: 4px;
+}
+
+/* cuando se acerca al límite */
+.char-counter.warning {
+    color: #d97706;
+}
+
+/* cuando llega al límite */
+.char-counter.limit {
+    color: #dc2626;
+}
+.btn-clear-filters {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+
+    padding: 5px 10px;
+    font-size: 13px;
+    border: none;
+    border-radius: 6px;
+
+    background: #fee2e2; /* rojo claro */
+    color: #b91c1c;      /* rojo fuerte */
+
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* hover */
+.btn-clear-filters:hover {
+    background: #fecaca;
+    color: #7f1d1d;
+}
+
+/* icono X más grande */
+.btn-clear-filters span {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+
+
+.view-toggle {
+    display: flex;
+    background: #e5e7eb;
+    border-radius: 10px;
+    padding: 4px;
+    width: fit-content;
+}
+
+.view-toggle button {
+    border: none;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 8px;
+    background: transparent;
+    font-weight: 500;
+}
+
+.view-toggle button.active {
+    background: #111;
+    color: white;
+}
+
+
+
+
+
+
+
+/* TITULO */
+.titulo-analisis {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* KPIs */
+.kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.kpi-card {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.kpi-card span {
+    font-size: 14px;
+    color: #666;
+}
+
+.kpi-card h3 {
+    margin-top: 5px;
+    font-size: 22px;
+}
+
+/* GRID DE 2 COLUMNAS */
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+#vistaAnalisis {
+    padding: 0 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+/* CARDS GENERALES */
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+.contenedor-grafico {
+    position: relative;
+    height: 250px;
+    margin-top: 20px;
+}
+
+.card {
+    overflow: visible;
+}
+.card, .kpi-card {
+    transition: all 0.25s ease;
+}
+
+.card:hover, .kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+}
+
+
+canvas {
+    max-height: 250px;
+    margin-top: 30px;
+}
+
+.contenedor-grafico {
+    position: relative;
+    height: 250px;
+}
+
+/* canvas ocupa todo */
+.contenedor-grafico canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.estado-vacio {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+    color: #666;
+}
+
+.estado-vacio .icono {
+    font-size: 28px;
+    margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+
+    /* KPIs → 2 por fila */
+    .kpis {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* gráficos en columna */
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    /* padding más compacto */
+    .card {
+        padding: 15px;
+    }
+
+    /* títulos más pequeños */
+    .titulo-analisis {
+        font-size: 20px;
+    }
+
+    /* gráficos más bajos */
+    .contenedor-grafico {
+        height: 200px;
+    }
+
+    #vistaAnalisis {
+    max-width: 1200px;
+
+    }
+}
+
+@media (max-width: 480px) {
+
+    /* KPIs → 1 por fila */
+    .kpis {
+        grid-template-columns: 1fr;
+    }
+
+    /* textos más compactos */
+    .card {
+        font-size: 14px;
+    }
+
+    /* gráficos aún más compactos */
+    .contenedor-grafico {
+        height: 180px;
+    }
+
+}
+
+
+/* OVERLAY (igual que modal-overlay pero aislado) */
+.folder-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    background: rgba(0,0,0,0.35);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    opacity: 0;
+    pointer-events: none;
+
+    transition: 0.2s;
+}
+
+.folder-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* MODAL */
+.folder-modal {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    width: 350px;
+    max-width: 90%;
+
+    transform: scale(0.95);
+    transition: 0.2s;
+}
+
+.folder-overlay.active .folder-modal {
+    transform: scale(1);
+}
+
+/* HEADER */
+.folder-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+/* BODY */
+.folder-body input {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    margin-top: 5px;
+    box-sizing: border-box;
+}
+
+/* FOOTER */
+.folder-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+/* CLOSE */
+.folder-close {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* ERROR */
+.error-text {
+    color: #ef4444;
+    font-size: 12px;
+}
+
+.btn-guardar{
+
+    border:none;
+    background:black;
+    color:white;
+
+    padding:8px 14px;
+    border-radius:6px;
+
+    cursor:pointer;
+}
+
+.folder-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.folder-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0.6;
+    transition: 0.2s;
+}
+
+.folder-actions button:hover {
+    opacity: 1;
 }
